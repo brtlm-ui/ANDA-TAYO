@@ -1,0 +1,12 @@
+{# usage: {% include 'partials/_stars.html' with rating=spot.avg_rating reviews=spot.review_total %} #}
+{% if rating %}
+    {% widthratio rating 5 100 as pct %}
+    <span class="relative inline-block whitespace-nowrap text-sm leading-none" aria-hidden="true">
+        <span class="text-stone-300">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+        <span class="absolute left-0 top-0 overflow-hidden whitespace-nowrap text-amber-400" style="width: {{ pct }}%">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+    </span>
+    <span class="text-xs font-bold">{{ rating|floatformat:1 }}</span>
+    <span class="text-xs text-stone-500">({{ reviews }} review{{ reviews|pluralize }})</span>
+{% else %}
+    <span class="text-xs text-stone-500">No reviews yet</span>
+{% endif %}

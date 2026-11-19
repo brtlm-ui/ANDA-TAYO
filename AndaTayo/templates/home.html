@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load ui %}
+
+{% block title %}Discover{% endblock %}
+
+{% block content %}
+
+<!-- ================= HERO ================= -->
+<section class="mx-auto grid max-w-6xl items-center gap-10 px-5 pb-14 pt-12 md:grid-cols-2">
+    <div>
+        <a href="{% url 'map_explorer' %}" class="tag uppercase tracking-wide" style="--tag-bg: var(--butter)">
+            {% icon 'pin' 'h-3.5 w-3.5' %} Click here to view what's nearby
+        </a>
+        <h1 class="mt-5 text-5xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">Wherever the mood takes you.</h1>
+        <p class="mt-4 max-w-md text-base text-stone-600">
+            Discover Zamboanga hangout spots filtered by mood, budget, or barkada size.
+        </p>
+
+        <form action="{% url 'spot_list' %}" method="get" class="card mt-7 flex max-w-lg items-center gap-2 !rounded-full p-1.5">
+            <label for="hero-q" class="sr-only">Search</label>
+            <span class="pl-3 text-stone-400">{% icon 'search' 'h-4 w-4' %}</span>
+            <input id="hero-q" type="search" name="q" placeholder="Enter your campus mood or cafe..."
+                   class="min-w-0 flex-1 bg-transparent py-2 text-sm placeholder:text-stone-400 focus:outline-none">
+            <button type="submit" class="btn btn-dark">Explore Spots</button>
+        </form>
+
+        {% if stats.reviews %}
+        <p class="mt-4 flex items-center gap-2 text-xs text-stone-600">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            {{ stats.reviews }} student review{{ stats.reviews|pluralize }}{% if stats.avg_rating %} &middot; {{ stats.avg_rating|floatformat:1 }} average rating{% endif %}
+        </p>
+        {% endif %}
+
+        <div class="mt-5 flex flex-wrap items-center gap-2">
+            <span class="eyebrow mr-1">Hotspots</span>
+            <a href="{% url 'spot_list' %}?area=wmsu" class="chip">{% icon 'school' 'h-3.5 w-3.5' %} Near WMSU Main</a>
+            <a href="{% url 'spot_list' %}?area=ateneo" class="chip">{% icon 'school' 'h-3.5 w-3.5' %} Near AdZU La Purisima</a>
+            <a href="{% url 'spot_list' %}?area=paseo" class="chip">{% icon 'sun' 'h-3.5 w-3.5' %} Paseo Waterfront</a>
+        </div>
+    </div>
+
+    <!-- Hero visual: the top spot's photo, or a placeholder until photos are added -->
+    {% with hero=top_spots.0 %}
+    <div class="relative mx-auto w-full max-w-sm">
+        <div class="absolute -right-3 top-3 h-full w-full rounded-t-[10rem] rounded-b-[3rem] bg-brand"></div>
+        <div class="relative aspect-[4/5] overflow-hidden rounded-t-[10rem] rounded-b-[3rem] border-2 border-ink bg-butter">
+            {% if hero and hero.image_src %}
+                <img src="{{ hero.image_src }}" alt="{{ hero.name }}" class="h-full w-full object-cover">
+            {% else %}
+                <div class="grid h-full w-full place-items-center text-ink/70">{% icon 'coffee' 'h-24 w-24' %}</div>
+            {% endif %}
+        </div>
+        {% if hero %}
+        <a href="{% url 'spot_detail' hero.id %}" class="absolute -left-6 bottom-8 flex items-center gap-2.5 rounded-2xl border-2 border-ink bg-butter px-3 py-2 shadow-md">
+            <span class="icon-badge h-9 w-9 bg-white">{% icon 'star' 'h-4 w-4' %}</span>
+            <span class="text-xs leading-tight">
+                <b class="block text-sm">{{ hero.name|truncatechars:22 }}</b>
+                {% if hero.avg_rating %}{{ hero.avg_rating|floatformat:1 }} &middot; {% endif %}From &#8369;{{ hero.starts_at_price|floatformat:0 }}
+            </span>
+        </a>
+        {% endif %}
+    </div>
+    {% endwith %}
+</section>
+
+<!-- ================= STAT BAR ================= -->
+<section class="border-y border-[color:var(--line)]">
+    <div class="mx-auto grid max-w-5xl grid-cols-2 gap-y-6 px-5 py-8 text-center md:grid-cols-4 md:divide-x md:divide-[color:var(--line)]">
+        <div><p class="text-3xl font-extrabold">{{ stats.reviews }}</p><p class="eyebrow mt-1 normal-case tracking-normal">Student Reviews</p></div>
+        <div><p class="text-3xl font-extrabold">{{ stats.spots }}</p><p class="eyebrow mt-1 normal-case tracking-normal">Vetted Tambayans</p></div>
+        <div><p class="inline-flex items-center gap-1 text-3xl font-extrabold">{% if stats.avg_rating %}{{ stats.avg_rating|floatformat:1 }} <span class="text-amber-400">{% icon 'star' 'h-6 w-6 fill-current' %}</span>{% else %}&ndash;{% endif %}</p><p class="eyebrow mt-1 normal-case tracking-normal">Average Peer Rating</p></div>
+        <div><p class="text-3xl font-extrabold">{{ stats.areas }}</p><p class="eyebrow mt-1 normal-case tracking-normal">Campus Areas Covered</p></div>
+    </div>
+</section>
+
+<!-- ================= POPULAR SPOTS ================= -->
+<section class="mx-auto mt-20 max-w-6xl px-5">
+    <h2 class="text-center text-3xl font-extrabold tracking-tight md:text-4xl">Popular Hangouts &amp; Study Spots</h2>
+    {% if top_spots %}
+        <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {% for spot in top_spots %}
+                {% include 'partials/_spot_card.html' %}
+            {% endfor %}
+        </div>
+        <div class="mt-10 flex justify-center gap-3">
+            <a href="{% url 'spot_list' %}" class="btn btn-dark">{% icon 'list' %} View All Spots</a>
+            <a href="{% url 'map_explorer' %}" class="btn btn-light">{% icon 'map' %} Open the Map</a>
+        </div>
+    {% else %}
+        <p class="card mt-10 p-10 text-center text-stone-500">
+            No spots yet. Add the first one from the admin site, or <a class="font-bold underline" href="{% url 'add_spot' %}">submit a spot</a>.
+        </p>
+    {% endif %}
+</section>
+
+<!-- ================= WHY ANDA TAYO ================= -->
+<section class="mx-auto mt-16 max-w-4xl px-5">
+    <div class="grid gap-6 text-sm sm:grid-cols-3">
+        <div class="flex items-center gap-3"><span class="icon-badge h-11 w-11 bg-ink text-white">{% icon 'sparkle' 'h-5 w-5' %}</span><span><b class="block">Mood-based filters</b><span class="text-xs text-stone-500">Study, barkada, aesthetic or budget</span></span></div>
+        <div class="flex items-center gap-3"><span class="icon-badge h-11 w-11 bg-ink text-white">{% icon 'wifi' 'h-5 w-5' %}</span><span><b class="block">Wi-Fi &amp; outlets listed</b><span class="text-xs text-stone-500">Know before you go</span></span></div>
+        <div class="flex items-center gap-3"><span class="icon-badge h-11 w-11 bg-ink text-white">{% icon 'chat' 'h-5 w-5' %}</span><span><b class="block">Real student reviews</b><span class="text-xs text-stone-500">Tambayan tales from your peers</span></span></div>
+    </div>
+</section>
+
+<!-- ================= MOODS ================= -->
+<section id="moods" class="mx-auto mt-20 max-w-6xl scroll-mt-6 px-5">
+    <h2 class="text-center text-3xl font-extrabold tracking-tight md:text-4xl">Top Categories &amp; Moods</h2>
+    <div class="mt-10 grid gap-x-5 gap-y-9 sm:grid-cols-2 lg:grid-cols-4">
+        {% for mood in moods %}
+        <a href="{% url 'spot_list' %}?mood={{ mood.id }}"
+           class="relative flex h-28 items-center justify-center rounded-2xl border-2 border-ink text-base font-bold transition hover:-translate-y-1"
+           style="background: {{ mood.pastel }}">
+            <span class="text-center">{{ mood.name }}<span class="mt-0.5 block text-xs font-medium opacity-70">{{ mood.spot_total }} spot{{ mood.spot_total|pluralize }}</span></span>
+            <span class="icon-badge absolute -bottom-4 h-9 w-9 border-2 border-ink bg-butter">{% icon mood.icon 'h-4 w-4' %}</span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- ================= TALES ================= -->
+<section id="tales" class="mx-auto mt-24 max-w-6xl scroll-mt-6 px-5">
+    <h2 class="text-center text-3xl font-extrabold tracking-tight md:text-4xl">Testimonials &amp; Tambayan Tales</h2>
+    {% if tales %}
+    <div class="mt-10 grid gap-5 rounded-3xl bg-butter/70 p-6 md:grid-cols-2">
+        {% for tale in tales %}
+            {% include 'partials/_tale.html' with tale=tale show_spot=True %}
+        {% endfor %}
+    </div>
+    {% else %}
+        <p class="mt-10 rounded-3xl bg-butter/60 p-10 text-center text-sm text-stone-700">No tales yet. Visit a spot and be the first to share yours.</p>
+    {% endif %}
+</section>
+
+{% endblock %}

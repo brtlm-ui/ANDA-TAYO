@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load ui %}
+
+{% block title %}Browse Tambayans{% endblock %}
+
+{% block content %}
+
+<!-- ================= PAGE HEADER ================= -->
+<section class="mx-auto max-w-6xl px-5 pt-10">
+    <div class="flex flex-wrap items-end justify-between gap-6">
+        <div>
+            <a href="{% url 'map_explorer' %}" class="tag uppercase tracking-wide" style="--tag-bg: var(--butter)">
+                {% icon 'pin' 'h-3.5 w-3.5' %} Click here to view what's nearby
+            </a>
+            <h1 class="mt-4 text-5xl font-extrabold leading-none tracking-tight">Browse<br>Tambayans</h1>
+            <p class="mt-4 max-w-lg text-sm text-stone-600">
+                Find the perfect spot to study, hang out, or vibe around WMSU, AdZU, and coastal Zamboanga City.
+            </p>
+        </div>
+        <div class="flex gap-2">
+            <div class="card px-4 py-2.5 text-center"><p class="text-lg font-extrabold">{{ curated_total }}</p><p class="text-[10px] text-stone-500">Curated Hubs</p></div>
+            <div class="card px-4 py-2.5 text-center"><p class="text-lg font-extrabold text-amber-700">{{ wifi_pct }}%</p><p class="text-[10px] text-stone-500">With Wi-Fi</p></div>
+            <div class="card px-4 py-2.5 text-center"><p class="text-lg font-extrabold">{% if min_price %}&#8369;{{ min_price|floatformat:0 }}+{% else %}&ndash;{% endif %}</p><p class="text-[10px] text-stone-500">Student Friendly</p></div>
+        </div>
+    </div>
+
+    {% if pending_count %}
+    <p class="mt-6 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
+        <b>{{ pending_count }} community submission{{ pending_count|pluralize }}</b> waiting for approval.
+        <a class="font-bold underline" href="{% url 'admin:core_spot_changelist' %}?is_approved__exact=0">Review in admin</a>
+    </p>
+    {% endif %}
+
+    <!-- ================= FILTER CARD ================= -->
+    <form method="get" id="filters" class="card mt-8 p-5">
+        <div class="flex flex-wrap items-center gap-3">
+            <label class="relative min-w-[16rem] flex-1">
+                <span class="sr-only">Search</span>
+                <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">{% icon 'search' %}</span>
+                <input type="search" name="q" value="{{ sel.q }}" placeholder="Search by spot name, coffee, or street..." class="field field-pill pl-11">
+            </label>
+            <div class="flex rounded-full bg-sand p-1">
+                <span class="btn btn-dark btn-sm">{% icon 'list' 'h-3.5 w-3.5' %} List</span>
+                <a href="{% url 'map_explorer' %}{% if map_query %}?{{ map_query }}{% endif %}" class="btn btn-sm text-stone-600 hover:text-ink">{% icon 'map' 'h-3.5 w-3.5' %} Map</a>
+            </div>
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-center gap-2">
+            <span class="eyebrow mr-1">Vibe</span>
+            {# keeps the chosen mood when other filters change; a clicked chip (later in the form) overrides it #}
+            <input type="hidden" name="mood" value="{{ sel.mood }}">
+            {% for m in moods %}
+            <button type="submit" name="mood" value="{% if sel.mood != m.id|stringformat:'s' %}{{ m.id }}{% endif %}"
+                    class="chip {% if sel.mood == m.id|stringformat:'s' %}is-active{% endif %}">
+                {% icon m.icon 'h-3.5 w-3.5' %} {{ m.name }}
+            </button>
+            {% endfor %}
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold">
+            <select name="category" onchange="this.form.submit()" class="field field-pill w-auto py-2 text-xs font-semibold">
+                <option value="">Category: all</option>
+                {% for code, label in category_choices %}
+                <option value="{{ code }}" {% if sel.category == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <select name="budget" onchange="this.form.submit()" class="field field-pill w-auto py-2 text-xs font-semibold">
+                <option value="">Budget: any</option>
+                <option value="50" {% if sel.budget == '50' %}selected{% endif %}>Up to &#8369;50</option>
+                <option value="100" {% if sel.budget == '100' %}selected{% endif %}>Up to &#8369;100</option>
+                <option value="150" {% if sel.budget == '150' %}selected{% endif %}>Up to &#8369;150</option>
+                <option value="200" {% if sel.budget == '200' %}selected{% endif %}>Up to &#8369;200</option>
+            </select>
+            <select name="distance" onchange="this.form.submit()" class="field field-pill w-auto py-2 text-xs font-semibold">
+                <option value="">Distance: anywhere</option>
+                <option value="500" {% if sel.distance == '500' %}selected{% endif %}>Within 500 m of WMSU</option>
+                <option value="1000" {% if sel.distance == '1000' %}selected{% endif %}>Within 1 km of WMSU</option>
+                <option value="3000" {% if sel.distance == '3000' %}selected{% endif %}>Within 3 km of WMSU</option>
+                <option value="5000" {% if sel.distance == '5000' %}selected{% endif %}>Within 5 km of WMSU</option>
+            </select>
+            <select name="area" onchange="this.form.submit()" class="field field-pill w-auto py-2 text-xs font-semibold">
+                <option value="">Area: all</option>
+                {% for code, label in area_choices %}
+                <option value="{{ code }}" {% if sel.area == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+
+            <details class="relative ml-auto" {% if sel.amenities or sel.open24 %}open{% endif %}>
+                <summary class="chip">More filters {% icon 'chevron-down' 'h-3.5 w-3.5' %}</summary>
+                <div class="card absolute right-0 z-10 mt-2 w-60 space-y-2.5 p-4 text-sm font-medium shadow-lg">
+                    {% for a in amenities %}
+                    <label class="flex items-center gap-2"><input type="checkbox" name="amenity" value="{{ a.code }}" {% if a.code in sel.amenities %}checked{% endif %}> {% icon a.icon 'h-4 w-4 text-stone-500' %} {{ a.name }}</label>
+                    {% endfor %}
+                    <label class="flex items-center gap-2"><input type="checkbox" name="open24" value="1" {% if sel.open24 %}checked{% endif %}> {% icon 'clock' 'h-4 w-4 text-stone-500' %} Open 24 hours</label>
+                    <button type="submit" class="btn btn-dark btn-sm mt-1 w-full">Apply</button>
+                </div>
+            </details>
+        </div>
+
+        <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--line)] pt-4">
+            <p class="flex items-center gap-2 text-sm font-semibold">
+                <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                Showing {{ total }} student-vetted spot{{ total|pluralize }}
+                <span class="font-normal text-stone-500">across Zamboanga City</span>
+                {% if sel.q or sel.mood or sel.category or sel.area or sel.budget or sel.distance or sel.amenities or sel.open24 %}
+                    <a href="{% url 'spot_list' %}" class="ml-2 text-xs font-bold text-brand underline">Clear filters</a>
+                {% endif %}
+            </p>
+            <label class="flex items-center gap-2 text-xs text-stone-500">Sort by
+                <select name="sort" onchange="this.form.submit()" class="field field-pill w-auto py-2 text-xs font-semibold">
+                    <option value="rating" {% if sel.sort == 'rating' %}selected{% endif %}>Highest rated</option>
+                    <option value="nearest" {% if sel.sort == 'nearest' %}selected{% endif %}>Nearest to WMSU</option>
+                    <option value="cheapest" {% if sel.sort == 'cheapest' %}selected{% endif %}>Cheapest first</option>
+                    <option value="newest" {% if sel.sort == 'newest' %}selected{% endif %}>Newest</option>
+                </select>
+            </label>
+        </div>
+    </form>
+</section>
+
+<!-- ================= LIST ================= -->
+<section class="mx-auto mt-10 max-w-6xl px-5">
+    {% if spots %}
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {% for spot in spots %}
+            {% include 'partials/_spot_card.html' %}
+        {% endfor %}
+    </div>
+    <div class="mt-10 text-center">
+        {% if has_more %}
+        <a href="?{{ filter_query }}{% if filter_query %}&amp;{% endif %}limit={{ next_limit }}" class="btn btn-dark">Load More Spots {% icon 'chevron-down' %}</a>
+        {% endif %}
+        <p class="mt-3 text-xs text-stone-500">Showing {{ spots|length }} of {{ total }} student spot{{ total|pluralize }}</p>
+    </div>
+    {% else %}
+    <div class="card p-14 text-center">
+        <p class="text-lg font-extrabold">No tambayans match those filters.</p>
+        <p class="mt-1 text-sm text-stone-500">Try a different mood, or loosen the budget and distance.</p>
+        <a href="{% url 'spot_list' %}" class="btn btn-dark mt-5">Clear filters</a>
+    </div>
+    {% endif %}
+</section>
+
+{% include 'partials/_community_banner.html' %}
+
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}About Us{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-3xl px-5 pt-12">
+    <h1 class="text-5xl font-extrabold leading-tight tracking-tight">About Anda Tayo</h1>
+
+    <div class="mt-10 space-y-8 text-base leading-relaxed text-stone-700">
+        <div>
+            <h2 class="text-xl font-extrabold text-ink">The problem</h2>
+            <p class="mt-2">
+                Students often struggle to find a hangout or study spot that fits what they need at that moment:
+                a quiet place to focus, a budget-friendly spot to relax with friends, or a nice spot for taking photos.
+                Generic map apps and word-of-mouth do not consider mood, weather, or how busy a place is, so students
+                end up hopping from place to place before settling on one.
+            </p>
+        </div>
+        <div>
+            <h2 class="text-xl font-extrabold text-ink">What Anda Tayo does</h2>
+            <p class="mt-2">
+                Anda Tayo helps students and locals in Zamboanga City quickly discover hangout and study spots that match
+                their mood, needs, and situation. Spot details, mood-based filters, and real student reviews all live in one place.
+            </p>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-3">
+            <div class="card p-5"><b class="block text-ink">Students</b><span class="text-sm">Filter by mood, budget and distance, and read honest reviews.</span></div>
+            <div class="card p-5"><b class="block text-ink">Spot owners</b><span class="text-sm">Showcase a cafe or hangout and keep its details current.</span></div>
+            <div class="card p-5"><b class="block text-ink">Content creators</b><span class="text-sm">Scout spots by how photogenic they are, plus WiFi and sockets.</span></div>
+        </div>
+        <div id="verification" class="scroll-mt-6 rounded-3xl bg-butter/70 p-6">
+            <h2 class="text-xl font-extrabold text-ink">Verification rules</h2>
+            <ul class="mt-3 list-disc space-y-1 pl-5 text-sm">
+                <li>Anyone can submit a tambayan spot.</li>
+                <li>New submissions stay hidden until an admin checks the details and approves them.</li>
+                <li>Only admins can edit or delete spots.</li>
+            </ul>
+        </div>
+        <p class="text-sm text-stone-500">
+            Made by Princess Loraine Bartolome and Qaiser T. Hamid &middot; BSIT-3A &middot;
+            Western Mindanao State University, College of Computing Studies.
+        </p>
+    </div>
+</section>
+{% endblock %}

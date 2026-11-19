@@ -1,0 +1,49 @@
+{% load ui %}
+{# One spot card (landing page + list view). Expects `spot`. Same tags/icons as the map popup and list. #}
+<article class="card group flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-md">
+    <a href="{% url 'spot_detail' spot.id %}" class="relative block h-40 overflow-hidden" {% if not spot.image_src %}style="background: {{ spot.mood.pastel }}"{% endif %}>
+        {% if spot.image_src %}
+            <img src="{{ spot.image_src }}" alt="{{ spot.name }}" loading="lazy" class="h-full w-full object-cover transition duration-300 group-hover:scale-105">
+        {% else %}
+            <span class="grid h-full w-full place-items-center text-ink/60">{% icon spot.category_icon 'h-12 w-12' %}</span>
+        {% endif %}
+        {% if not spot.is_approved %}
+            <span class="tag absolute left-2 top-2 uppercase" style="--tag-bg: #dc2626; --tag-fg: #fff">Pending</span>
+        {% elif spot.is_top_pick %}
+            <span class="tag absolute left-2 top-2 uppercase" style="--tag-bg: var(--butter)">{% icon 'star' 'h-3 w-3 fill-current' %} Top Pick</span>
+        {% endif %}
+        {% if spot.distance_label %}
+            <span class="tag absolute bottom-2 right-2" style="--tag-bg: rgba(255,255,255,.92)">{% icon 'school' 'h-3 w-3' %} {{ spot.distance_label }}</span>
+        {% endif %}
+    </a>
+
+    <div class="flex flex-1 flex-col p-4">
+        <div class="flex flex-wrap items-center gap-1.5">
+            <span class="tag" style="--tag-bg: {{ spot.category_color }}; --tag-fg: #fff">{% icon spot.category_icon 'h-3 w-3' %} {{ spot.get_category_display }}</span>
+            <span class="tag" style="--tag-bg: {{ spot.mood.pastel }}">{{ spot.mood.name }}</span>
+        </div>
+        <h3 class="mt-2.5 truncate text-base font-extrabold leading-tight">
+            <a href="{% url 'spot_detail' spot.id %}">{{ spot.name }}</a>
+        </h3>
+        <p class="mt-1 flex items-center gap-1 truncate text-xs text-stone-500">
+            {% icon 'pin' 'h-3 w-3 shrink-0' %}<span class="truncate">{{ spot.address }}</span>
+        </p>
+        <div class="mt-2 flex flex-wrap items-center gap-x-1.5">
+            {% include 'partials/_stars.html' with rating=spot.avg_rating reviews=spot.review_total %}
+        </div>
+        {% if spot.hours_label or spot.amenities.all %}
+        <div class="mt-2 flex items-center justify-between gap-2 text-stone-500">
+            <span class="flex items-center gap-1 text-[11px] font-semibold">{% if spot.hours_label %}{% icon 'clock' 'h-3 w-3' %} {{ spot.hours_label }}{% endif %}</span>
+            <span class="flex items-center gap-1.5">{% for a in spot.amenities.all %}<span title="{{ a.name }}">{% icon a.icon 'h-3.5 w-3.5' %}</span>{% endfor %}</span>
+        </div>
+        {% endif %}
+
+        <div class="mt-auto flex items-end justify-between gap-2 border-t border-[color:var(--line)] pt-3">
+            <div>
+                <p class="text-sm font-extrabold">Starts at &#8369;{{ spot.starts_at_price|floatformat:0 }}</p>
+                {% if spot.min_spend_note %}<p class="text-[11px] text-stone-500">{{ spot.min_spend_note }}</p>{% endif %}
+            </div>
+            <a href="{% url 'spot_detail' spot.id %}" class="btn btn-dark btn-sm">View Spot</a>
+        </div>
+    </div>
+</article>

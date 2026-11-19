@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Submit a Tambayan Spot{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-3xl px-5 pt-10">
+    <p class="eyebrow !text-amber-700">Know a secret tambayan?</p>
+    <h1 class="mt-2 text-4xl font-extrabold tracking-tight">Submit a Tambayan Spot</h1>
+    <p class="mb-8 mt-2 text-sm text-stone-600">
+        Tell us about a hangout or study spot. {% if not user.is_staff %}An admin will verify it before it appears on the site.{% endif %}
+    </p>
+    {% include 'partials/_spot_form.html' with submit_label='Submit spot' %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/map-config.js' %}"></script>
+<script src="{% static 'js/location-picker.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load ui %}
+
+{% block title %}{{ spot.name }}{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-6xl px-5 pt-8">
+    <a href="{% url 'spot_list' %}" class="btn btn-light btn-sm">{% icon 'arrow-left' 'h-3.5 w-3.5' %} All spots</a>
+
+    <div class="mt-5 grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+        <!-- LEFT -->
+        <div>
+            <div class="relative h-72 overflow-hidden rounded-3xl border-2 border-ink md:h-96" {% if not spot.image_src %}style="background: {{ spot.mood.pastel }}"{% endif %}>
+                {% if spot.image_src %}
+                    <img src="{{ spot.image_src }}" alt="{{ spot.name }}" class="h-full w-full object-cover">
+                {% else %}
+                    <span class="grid h-full w-full place-items-center text-ink/60">{% icon spot.category_icon 'h-20 w-20' %}</span>
+                {% endif %}
+                {% if not spot.is_approved %}
+                    <span class="tag absolute left-4 top-4 uppercase" style="--tag-bg: #dc2626; --tag-fg: #fff">Pending approval</span>
+                {% elif spot.is_top_pick %}
+                    <span class="tag absolute left-4 top-4 uppercase" style="--tag-bg: var(--butter)">{% icon 'star' 'h-3 w-3 fill-current' %} Top Pick</span>
+                {% endif %}
+            </div>
+
+            <div class="mt-6 flex flex-wrap items-center gap-2">
+                <a href="{% url 'map_explorer' %}?category={{ spot.category }}" class="tag" style="--tag-bg: {{ spot.category_color }}; --tag-fg: #fff">{% icon spot.category_icon 'h-3 w-3' %} {{ spot.get_category_display }}</a>
+                <a href="{% url 'spot_list' %}?mood={{ spot.mood.id }}" class="tag" style="--tag-bg: {{ spot.mood.pastel }}">{% icon spot.mood.icon 'h-3 w-3' %} {{ spot.mood.name }}</a>
+                {% if spot.is_open_now is True %}<span class="tag" style="--tag-bg: #d1fae5; --tag-fg: #065f46">{% icon 'clock' 'h-3 w-3' %} Open now</span>
+                {% elif spot.is_open_now is False %}<span class="tag" style="--tag-bg: #fee2e2; --tag-fg: #991b1b">{% icon 'clock' 'h-3 w-3' %} Closed now</span>{% endif %}
+            </div>
+            <h1 class="mt-3 text-4xl font-extrabold tracking-tight">{{ spot.name }}</h1>
+            <p class="mt-1 flex items-center gap-1 text-sm text-stone-500">{% icon 'pin' 'h-3.5 w-3.5' %} {{ spot.address }} &middot; {{ spot.get_area_display }}</p>
+            <div class="mt-2">{% include 'partials/_stars.html' with rating=spot.avg_rating reviews=spot.review_total %}</div>
+
+            {% if spot.description %}
+            <p class="mt-6 max-w-2xl text-base leading-relaxed text-stone-700">{{ spot.description|linebreaksbr }}</p>
+            {% endif %}
+
+            <!-- Reviews -->
+            <h2 id="reviews" class="mt-12 text-2xl font-extrabold tracking-tight">Tambayan Tales</h2>
+            <div class="mt-4 space-y-4">
+                {% for review in reviews %}
+                    {% include 'partials/_tale.html' with tale=review can_delete=user.is_staff %}
+                {% empty %}
+                    <p class="card p-6 text-sm text-stone-500">No tales yet. Been here? Share yours below.</p>
+                {% endfor %}
+            </div>
+
+            <form method="post" action="{% url 'add_review' spot.id %}" class="card mt-8 p-6">
+                {% csrf_token %}
+                <h3 class="text-lg font-extrabold">Share your tambayan tale</h3>
+                <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div><label for="{{ review_form.reviewer_name.id_for_label }}" class="eyebrow mb-1.5 block">{{ review_form.reviewer_name.label }}</label>{{ review_form.reviewer_name }}</div>
+                    <div><label for="{{ review_form.reviewer_note.id_for_label }}" class="eyebrow mb-1.5 block">{{ review_form.reviewer_note.label }}</label>{{ review_form.reviewer_note }}</div>
+                    <div><label for="{{ review_form.rating.id_for_label }}" class="eyebrow mb-1.5 block">Rating</label>{{ review_form.rating }}</div>
+                    <div class="sm:col-span-2"><label for="{{ review_form.comment.id_for_label }}" class="eyebrow mb-1.5 block">{{ review_form.comment.label }}</label>{{ review_form.comment }}</div>
+                </div>
+                <button type="submit" class="btn btn-dark mt-5">{% icon 'chat' %} Post tale</button>
+            </form>
+        </div>
+
+        <!-- RIGHT -->
+        <aside class="space-y-5">
+            <div class="card p-6">
+                <p class="eyebrow">Starts at</p>
+                <p class="text-4xl font-extrabold">&#8369;{{ spot.starts_at_price|floatformat:0 }} <span class="text-lg font-bold text-stone-400">{{ spot.price_level }}</span></p>
+                {% if spot.min_spend_note %}<p class="text-xs text-stone-500">{{ spot.min_spend_note }}</p>{% endif %}
+
+                <dl class="mt-5 divide-y divide-[color:var(--line)] text-sm">
+                    <div class="flex justify-between gap-4 py-2.5"><dt class="flex items-center gap-2 text-stone-500">{% icon 'clock' %} Hours</dt>
+                        <dd class="text-right font-semibold">{% if spot.is_24_hours %}24 hours{% elif spot.opening_time and spot.closing_time %}{{ spot.opening_time|time:"g:i A" }} &ndash; {{ spot.closing_time|time:"g:i A" }}{% else %}Not listed{% endif %}</dd></div>
+                    <div class="flex justify-between gap-4 py-2.5"><dt class="flex items-center gap-2 text-stone-500">{% icon 'wifi' %} Wi-Fi speed</dt>
+                        <dd class="text-right font-semibold">{% if spot.wifi_speed_mbps %}{{ spot.wifi_speed_mbps }} Mbps{% else %}Not listed{% endif %}</dd></div>
+                    <div class="flex justify-between gap-4 py-2.5"><dt class="flex items-center gap-2 text-stone-500">{% icon 'school' %} From WMSU</dt>
+                        <dd class="text-right font-semibold">{% if spot.distance_from_wmsu_m is not None %}{{ spot.distance_label }}{% else %}Not listed{% endif %}</dd></div>
+                </dl>
+
+                {% with amenities=spot.amenities.all %}
+                {% if amenities %}
+                <p class="eyebrow mt-5">Amenities</p>
+                <div class="mt-2 flex flex-wrap gap-2">
+                    {% for a in amenities %}<span class="tag">{% icon a.icon 'h-3.5 w-3.5' %} {{ a.name }}</span>{% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                {% if spot.latitude is not None and spot.longitude is not None %}
+                <div class="mt-6 grid gap-2">
+                    <a href="{% url 'map_explorer' %}?lat={{ spot.latitude }}&amp;lng={{ spot.longitude }}&amp;radius=1" class="btn btn-soft">{% icon 'map' %} See what's nearby</a>
+                    <a target="_blank" rel="noopener"
+                       href="https://www.google.com/maps/dir/?api=1&amp;destination={{ spot.latitude }},{{ spot.longitude }}&amp;travelmode=walking"
+                       class="btn btn-dark">{% icon 'route' %} Walking Route</a>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if user.is_staff %}
+            <div class="rounded-3xl border-2 border-dashed border-[color:var(--line)] p-5">
+                <p class="eyebrow">Admin</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <a href="{% url 'edit_spot' spot.id %}" class="btn btn-dark btn-sm">Edit spot</a>
+                    <a href="{% url 'admin:core_spot_change' spot.id %}" class="btn btn-light btn-sm">Open in admin</a>
+                    <form method="post" action="{% url 'delete_spot' spot.id %}" onsubmit="return confirm('Delete this spot and all its reviews?');">
+                        {% csrf_token %}<button class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </aside>
+    </div>
+</section>
+{% endblock %}

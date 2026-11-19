@@ -1,0 +1,38 @@
+{# Shared by add_spot.html and edit_spot.html. Expects `form` and `submit_label`. #}
+{# The page must also load Leaflet + js/location-picker.js (see add_spot.html) for the map picker. #}
+<form method="post" enctype="multipart/form-data" class="card p-6 md:p-8">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="grid gap-5 sm:grid-cols-2">
+        {% for field in form %}
+            {% if field.name == 'latitude' %}
+            <div class="sm:col-span-2">
+                <p class="eyebrow mb-2 block">Location on the map</p>
+                <div data-location-picker></div>
+            </div>
+            {% endif %}
+
+            <div class="{% if field.name in 'name address description photo_url cover_image amenities' %}sm:col-span-2{% endif %}">
+                {% if field.name == 'amenities' %}
+                    <p class="eyebrow mb-2 block">{{ field.label }}</p>
+                    <div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                        {% for box in field %}
+                            <label class="flex items-center gap-2">{{ box.tag }} {{ box.choice_label }}</label>
+                        {% endfor %}
+                    </div>
+                {% elif field.field.widget.input_type == 'checkbox' %}
+                    <label class="flex items-center gap-2 pt-6 text-sm font-semibold">{{ field }} {{ field.label }}</label>
+                {% else %}
+                    <label for="{{ field.id_for_label }}" class="eyebrow mb-1.5 block">{{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}</label>
+                    {{ field }}
+                {% endif %}
+                {% if field.help_text %}<p class="mt-1 text-[11px] text-stone-500">{{ field.help_text }}</p>{% endif %}
+                {% for error in field.errors %}<p class="mt-1 text-xs font-semibold text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+    <div class="mt-6 flex gap-3">
+        <button type="submit" class="btn btn-dark btn-lg">{{ submit_label }}</button>
+        <a href="{% url 'spot_list' %}" class="btn btn-soft btn-lg">Cancel</a>
+    </div>
+</form>

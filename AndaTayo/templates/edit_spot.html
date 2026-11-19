@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit {{ spot.name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-3xl px-5 pt-10">
+    <a href="{% url 'spot_detail' spot.id %}" class="btn btn-light btn-sm">&larr; Back to {{ spot.name }}</a>
+    <h1 class="mb-8 mt-3 text-4xl font-extrabold tracking-tight">Edit Spot</h1>
+    {% include 'partials/_spot_form.html' with submit_label='Update spot' %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/map-config.js' %}"></script>
+<script src="{% static 'js/location-picker.js' %}"></script>
+{% endblock %}
