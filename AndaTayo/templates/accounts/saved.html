@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% load ui %}
+
+{% block title %}Saved spots{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-6xl px-5 py-10">
+    <p class="eyebrow">Your account</p>
+    <h1 class="mt-1 text-4xl font-extrabold tracking-tight">Saved spots</h1>
+    <p class="mt-2 text-sm text-stone-600">Places you bookmarked for later. Tap the bookmark on any spot page to add or remove it.</p>
+
+    {% if spots %}
+    <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {% for spot in spots %}
+            {% include 'partials/_spot_card.html' %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card mt-8 p-12 text-center">
+        <span class="icon-badge mx-auto h-14 w-14 bg-butter">{% icon 'bookmark' 'h-6 w-6' %}</span>
+        <p class="mt-4 text-lg font-extrabold">No saved spots yet</p>
+        <p class="mt-1 text-sm text-stone-500">Open any spot and tap "Save" to keep it here.</p>
+        <a href="{% url 'spot_list' %}" class="btn btn-dark mt-5">Browse spots</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

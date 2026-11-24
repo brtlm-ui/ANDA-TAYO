@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static ui %}
+{# Dashboard frame for Admins (/dashboard/) and Spot Owners (/owner/): sidebar + top bar. #}
+
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block messages %}{% endblock %}
+
+{% block content %}
+<div class="relative flex min-h-screen">
+    <!-- ================= SIDEBAR ================= -->
+    <aside id="dash-sidebar"
+           class="fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col border-r border-[color:var(--line)] bg-cream p-4 transition-transform duration-200
+                  lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:translate-x-0">
+        <div class="flex items-center justify-between">
+            <a href="{% url 'home' %}" class="-ml-2" aria-label="Anda Tayo - home">
+                <img src="{% static 'images/andatayo_logo.svg' %}" alt="Anda Tayo" width="187" height="60" class="h-11 w-auto">
+            </a>
+            <button type="button" class="rounded-full p-2 hover:bg-sand lg:hidden" data-sidebar-close aria-label="Close menu">{% icon 'x' %}</button>
+        </div>
+
+        <span class="tag mt-3 self-start" style="--tag-bg: {{ me.badge_bg }}">{% icon me.role_icon 'h-3 w-3' %} {{ me.role_label }}</span>
+
+        <nav class="mt-5 space-y-1 overflow-y-auto text-sm font-semibold" aria-label="Dashboard">
+            {% if me.role == 'admin' %}
+                {% url 'dashboard' as u %}{% include 'dashboard/_nav_item.html' with key='overview' label='Overview' icon_name='grid' url=u %}
+                {% url 'dashboard_approvals' as u %}{% include 'dashboard/_nav_item.html' with key='approvals' label='Pending approvals' icon_name='inbox' url=u badge=pending_total %}
+                {% url 'dashboard_spots' as u %}{% include 'dashboard/_nav_item.html' with key='spots' label='Spots' icon_name='pin' url=u %}
+                {% url 'dashboard_reviews' as u %}{% include 'dashboard/_nav_item.html' with key='reviews' label='Reviews' icon_name='chat' url=u %}
+                {% url 'dashboard_users' as u %}{% include 'dashboard/_nav_item.html' with key='users' label='Users & roles' icon_name='users' url=u %}
+                {% if user.is_superuser %}
+                <p class="eyebrow px-3 pb-1 pt-4">Advanced</p>
+                {% url 'admin:index' as u %}{% include 'dashboard/_nav_item.html' with key='django' label='Moods & amenities' icon_name='settings' url=u %}
+                {% endif %}
+            {% else %}
+                {% url 'owner_dashboard' as u %}{% include 'dashboard/_nav_item.html' with key='owner' label='My spots' icon_name='store' url=u %}
+                {% url 'add_spot' as u %}{% include 'dashboard/_nav_item.html' with key='add' label='Add a spot' icon_name='plus' url=u %}
+                {% url 'saved_spots' as u %}{% include 'dashboard/_nav_item.html' with key='saved' label='Saved spots' icon_name='bookmark' url=u %}
+                {% url 'account' as u %}{% include 'dashboard/_nav_item.html' with key='account' label='Account settings' icon_name='settings' url=u %}
+            {% endif %}
+        </nav>
+
+        <div class="mt-auto space-y-3 pt-6">
+            <a href="{% url 'home' %}" class="btn btn-light btn-sm w-full">{% icon 'external' 'h-3.5 w-3.5' %} View site</a>
+            <div class="card flex items-center gap-3 p-3">
+                <a href="{% url 'account' %}" class="icon-badge h-9 w-9 text-xs font-extrabold" style="background: {{ me.badge_bg }}" title="Account settings">{{ me.initials }}</a>
+                <div class="min-w-0 flex-1 leading-tight">
+                    <p class="truncate text-sm font-bold">{{ me.name }}</p>
+                    <p class="truncate text-[11px] text-stone-500">{{ me.email }}</p>
+                </div>
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="rounded-full p-2 text-stone-500 hover:bg-sand hover:text-red-700" aria-label="Log out" title="Log out">{% icon 'logout' %}</button>
+                </form>
+            </div>
+        </div>
+    </aside>
+    <div class="fixed inset-0 z-40 hidden bg-ink/40 lg:hidden" data-sidebar-backdrop></div>
+
+    <!-- ================= MAIN ================= -->
+    <div class="min-w-0 flex-1">
+        <header class="sticky top-0 z-30 flex items-center gap-3 border-b border-[color:var(--line)] bg-cream/90 px-5 py-3 backdrop-blur lg:px-8">
+            <button type="button" class="rounded-full p-2 hover:bg-sand lg:hidden" data-sidebar-open aria-label="Open menu">{% icon 'menu' 'h-5 w-5' %}</button>
+            <div class="min-w-0">
+                <p class="eyebrow truncate">{% block crumb %}{{ me.role_label }}{% endblock %}</p>
+                <h1 class="truncate text-xl font-extrabold tracking-tight">{% block page_title %}{% endblock %}</h1>
+            </div>
+            <div class="ml-auto flex items-center gap-2">
+                {% if me.role == 'admin' %}
+                <form action="{% url 'dashboard_spots' %}" method="get" class="relative hidden md:block">
+                    <label for="dash-search" class="sr-only">Search spots</label>
+                    <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">{% icon 'search' %}</span>
+                    <input id="dash-search" type="search" name="q" placeholder="Search spots..." class="field field-pill w-56 py-2 pl-10">
+                </form>
+                <a href="{% url 'dashboard_approvals' %}" class="relative rounded-full bg-white p-2.5 ring-1 ring-[color:var(--line)] hover:ring-ink"
+                   aria-label="Pending approvals: {{ pending_total }}" title="Pending approvals">
+                    {% icon 'bell' %}{% if pending_total %}<span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand"></span>{% endif %}
+                </a>
+                {% endif %}
+                {% block top_actions %}{% endblock %}
+            </div>
+        </header>
+
+        <main class="px-5 py-6 lg:px-8 lg:py-8">
+            {% if messages %}<div class="mb-5">{% include 'partials/_messages.html' %}</div>{% endif %}
+            {% block dash %}{% endblock %}
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% block dash_scripts %}{% endblock %}
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

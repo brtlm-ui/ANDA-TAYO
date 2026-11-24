@@ -27,7 +27,7 @@
     {% if pending_count %}
     <p class="mt-6 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
         <b>{{ pending_count }} community submission{{ pending_count|pluralize }}</b> waiting for approval.
-        <a class="font-bold underline" href="{% url 'admin:core_spot_changelist' %}?is_approved__exact=0">Review in admin</a>
+        <a class="font-bold underline" href="{% url 'dashboard_approvals' %}">Review them</a>
     </p>
     {% endif %}
 

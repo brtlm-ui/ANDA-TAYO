@@ -40,9 +40,23 @@ C:\xampp\mysql\bin\mysql.exe -u root -e "CREATE DATABASE IF NOT EXISTS andatayo_
 cd AndaTayo
 python manage.py migrate
 python manage.py seed_demo
-python manage.py createsuperuser
+python manage.py seed_accounts
 python manage.py runserver
 ```
+
+## Demo logins (development only)
+
+`python manage.py seed_accounts` creates one account per role (setup.bat runs it for you).
+Log in at `/login/` with the email **or** the username. Password for all: `AndaTayo2026!`
+
+| Role | Email | Username | Lands on |
+|---|---|---|---|
+| Superadmin | superadmin@andatayo.test | superadmin | /dashboard/ (+ Django admin) |
+| Admin | admin@andatayo.test | admin | /dashboard/ |
+| Spot Owner | owner@andatayo.test | owner | /owner/ (manages Library Coffee + Study) |
+| Student | student@andatayo.test | student | back where they were |
+
+Remove them before going online: `python manage.py seed_accounts --remove`.
 
 ## Notes
 

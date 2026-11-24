@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static ui %}
+{# Shared layout for Log in / Sign up / password reset: full-height split screen, no site header. #}
+{# One spacing unit everywhere: p-4 / gap-4 on phones, p-6 / gap-6 on desktop. #}
+
+{% block header %}{% endblock %}
+{% block messages %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<section class="grid min-h-screen gap-4 p-4 lg:grid-cols-2 lg:gap-6 lg:p-6">
+    <!-- Photo panel (desktop) -->
+    <div class="relative hidden overflow-hidden rounded-[2rem] border-2 border-ink bg-butter lg:block">
+        {% if hero_photo %}<img src="{{ hero_photo }}" alt="" class="absolute inset-0 h-full w-full object-cover">{% endif %}
+        <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/30 to-transparent"></div>
+        <a href="{% url 'home' %}" class="absolute left-6 top-6 rounded-full bg-cream/95 px-4 py-2 shadow-sm" aria-label="Anda Tayo - home">
+            <img src="{% static 'images/andatayo_logo.svg' %}" alt="Anda Tayo" width="187" height="60" class="h-8 w-auto">
+        </a>
+        <div class="absolute inset-x-0 bottom-0 p-10 text-white">
+            <span class="tag" style="--tag-bg: var(--butter)">{% icon 'pin' 'h-3 w-3' %} Zamboanga City</span>
+            <h2 class="mt-4 max-w-lg text-4xl font-extrabold leading-tight tracking-tight xl:text-5xl">{% block panel_title %}Wherever the mood takes you.{% endblock %}</h2>
+            <p class="mt-3 max-w-md text-sm text-white/85">{% block panel_text %}{% endblock %}</p>
+            <div class="mt-6 flex flex-wrap gap-2">{% block panel_points %}{% endblock %}</div>
+        </div>
+    </div>
+
+    <!-- Form column -->
+    <div class="flex flex-col">
+        <div class="flex items-center justify-between gap-3">
+            <a href="{% url 'home' %}" class="lg:invisible" aria-label="Anda Tayo - home">
+                <img src="{% static 'images/andatayo_logo.svg' %}" alt="Anda Tayo" width="187" height="60" class="h-10 w-auto">
+            </a>
+            <a href="{% url 'home' %}" class="btn btn-light btn-sm">{% icon 'arrow-left' 'h-3.5 w-3.5' %} Back to Anda Tayo</a>
+        </div>
+
+        <div class="flex flex-1 items-center justify-center py-6">
+            <div class="w-full max-w-lg">
+                {% if messages %}<div class="mb-4">{% include 'partials/_messages.html' %}</div>{% endif %}
+                <div class="card p-6 sm:p-10">
+                    {% block form %}{% endblock %}
+                </div>
+                {% block below_card %}{% endblock %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/auth.js' %}"></script>{% endblock %}

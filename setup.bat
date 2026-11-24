@@ -56,6 +56,8 @@ if errorlevel 1 goto :fail
 echo [5/5] Loading demo spots and photos...
 python manage.py seed_demo
 if errorlevel 1 goto :fail
+python manage.py seed_accounts
+if errorlevel 1 goto :fail
 
 REM --- 5. Admin account (optional) ------------------------------------
 echo.

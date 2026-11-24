@@ -1,0 +1,45 @@
+{% extends 'dashboard/_layout.html' %}
+{% load ui %}
+
+{% block title %}Users & roles{% endblock %}
+{% block crumb %}Admin &rsaquo; Users{% endblock %}
+{% block page_title %}Users &amp; roles{% endblock %}
+
+{% block dash %}
+<form method="get" class="flex flex-wrap items-center gap-2">
+    <label class="relative min-w-[14rem] flex-1 sm:max-w-xs">
+        <span class="sr-only">Search users</span>
+        <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">{% icon 'search' %}</span>
+        <input type="search" name="q" value="{{ q }}" placeholder="Search name or email" class="field field-pill py-2 pl-10">
+    </label>
+    <input type="hidden" name="role" value="{{ role }}">
+    <button type="submit" name="role" value="" class="chip {% if not role %}is-active{% endif %}">Everyone</button>
+    {% for value, label in role_choices %}
+    <button type="submit" name="role" value="{{ value }}" class="chip {% if role == value %}is-active{% endif %}">{{ label }}s</button>
+    {% endfor %}
+</form>
+
+<div class="card mt-5 overflow-x-auto">
+    <table class="w-full min-w-[44rem] text-left text-sm">
+        <thead class="border-b border-[color:var(--line)] bg-sand/40">
+            <tr class="eyebrow">
+                <th class="px-4 py-3 font-bold">User</th>
+                <th class="px-4 py-3 font-bold">Joined</th>
+                <th class="px-4 py-3 font-bold">Role</th>
+                <th class="px-4 py-3 text-right font-bold">Change role</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-[color:var(--line)]">
+            {% for u in users %}
+            {% if u.is_staff %}{% with r='admin' %}{% include 'dashboard/_user_row.html' %}{% endwith %}
+            {% else %}{% with r=u.profile.role %}{% include 'dashboard/_user_row.html' %}{% endwith %}{% endif %}
+            {% empty %}
+            <tr><td colspan="4" class="px-4 py-10 text-center text-stone-500">No users match.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="mt-3 text-xs text-stone-500">
+    Admins can approve spots and manage users. Spot Owners can edit the spots assigned to them. Superusers are managed from the command line.
+</p>
+{% endblock %}

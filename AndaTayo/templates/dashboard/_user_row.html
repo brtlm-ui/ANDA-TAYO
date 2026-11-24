@@ -1,0 +1,35 @@
+{% load ui %}
+{# One row of the Users & roles table. Expects `u` (user), `r` (their role), `role_choices`. #}
+<tr class="hover:bg-cream/60">
+    <td class="px-4 py-3">
+        <div class="flex items-center gap-3">
+            <span class="icon-badge h-9 w-9 text-xs font-extrabold" style="background: {% if r == 'admin' %}#ffe24a{% elif r == 'owner' %}#a9d8ff{% else %}#d9ccff{% endif %}">{{ u.email|slice:":1"|upper|default:"?" }}</span>
+            <div class="min-w-0">
+                <p class="truncate font-bold">{{ u.get_full_name|default:u.username }}{% if u == user %} <span class="text-xs font-normal text-stone-500">(you)</span>{% endif %}</p>
+                <p class="truncate text-xs text-stone-500">{{ u.email|default:"no email" }}</p>
+            </div>
+        </div>
+    </td>
+    <td class="px-4 py-3 text-xs text-stone-600">{{ u.date_joined|date:"M j, Y" }}</td>
+    <td class="px-4 py-3">
+        <span class="tag" style="--tag-bg: {% if r == 'admin' %}#ffe24a{% elif r == 'owner' %}#a9d8ff{% else %}#d9ccff{% endif %}">
+            {% if r == 'admin' %}{% icon 'shield' 'h-3 w-3' %} Admin{% elif r == 'owner' %}{% icon 'store' 'h-3 w-3' %} Spot Owner{% else %}{% icon 'user' 'h-3 w-3' %} Student{% endif %}
+        </span>
+        {% if u.profile.owner_requested_at and r == 'student' %}<a href="{% url 'dashboard_approvals' %}?show=owners" class="tag ml-1" style="--tag-bg: #fef3c7; --tag-fg: #92400e">Owner request</a>{% endif %}
+        {% if u.is_superuser %}<span class="tag ml-1" style="--tag-bg: var(--ink); --tag-fg: #fff">Superuser</span>{% endif %}
+    </td>
+    <td class="px-4 py-3">
+        {% if u == user or u.is_superuser %}
+            <p class="text-right text-xs text-stone-400">{% if u == user %}Can't change your own role{% else %}Managed by command line{% endif %}</p>
+        {% else %}
+        <form method="post" action="{% url 'set_role' u.id %}" class="flex justify-end gap-2">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <label class="sr-only" for="role-{{ u.id }}">Role for {{ u.email }}</label>
+            <select id="role-{{ u.id }}" name="role" class="field w-auto py-1.5 text-xs font-semibold">
+                {% for value, label in role_choices %}<option value="{{ value }}" {% if r == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            <button type="submit" class="btn btn-dark btn-sm">Save</button>
+        </form>
+        {% endif %}
+    </td>
+</tr>

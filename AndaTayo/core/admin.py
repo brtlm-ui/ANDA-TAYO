@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from .icons import svg
-from .models import Amenity, Mood, Review, Spot
+from .models import Amenity, Bookmark, Mood, Profile, Review, Spot
 
 LEAFLET_CSS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
 LEAFLET_JS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
@@ -64,3 +64,15 @@ class SpotAdmin(admin.ModelAdmin):
 class ReviewAdmin(admin.ModelAdmin):
     list_display = ('spot', 'reviewer_name', 'rating', 'created_at')
     list_filter = ('rating',)
+
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'role', 'school', 'owner_requested_at')
+    list_filter = ('role',)
+    search_fields = ('user__email', 'user__first_name', 'user__username')
+
+
+@admin.register(Bookmark)
+class BookmarkAdmin(admin.ModelAdmin):
+    list_display = ('user', 'spot', 'created_at')

@@ -13,7 +13,7 @@
         </div>
         <div class="flex items-center gap-3">
             <span class="tag" style="--tag-bg: #fff">{% icon 'star' 'h-3 w-3 fill-current text-amber-500' %} {{ tale.rating }}/5</span>
-            {% if can_delete %}
+            {% if can_delete or user.is_authenticated and tale.user_id == user.id %}
             <form method="post" action="{% url 'delete_review' tale.id %}" onsubmit="return confirm('Delete this review?');">
                 {% csrf_token %}<button class="btn btn-danger btn-sm">Delete</button>
             </form>

@@ -17,53 +17,17 @@
 </head>
 <body class="bg-cream font-sans text-ink antialiased">
 
+{% block header %}
 <!-- ================= HEADER ================= -->
-<header id="site-header" class="border-b border-stone-300/70 bg-cream">
-    <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-5 py-4">
-        <a href="{% url 'home' %}" class="-ml-3 shrink-0" aria-label="Anda Tayo - home">
-            <img src="{% static 'images/andatayo_logo.svg' %}" alt="Anda Tayo" width="187" height="60" class="h-12 w-auto">
-        </a>
-
-        <nav class="order-last flex w-full gap-5 overflow-x-auto text-sm font-medium text-stone-500 md:order-none md:w-auto md:flex-1 md:justify-center">
-            <a href="{% url 'home' %}" class="whitespace-nowrap hover:text-ink {% if request.resolver_match.url_name == 'home' %}font-bold text-ink{% endif %}">Discover</a>
-            <a href="{% url 'spot_list' %}" class="whitespace-nowrap hover:text-ink {% if request.resolver_match.url_name == 'spot_list' %}font-bold text-ink{% endif %}">Spots</a>
-            <a href="{% url 'map_explorer' %}" class="whitespace-nowrap hover:text-ink {% if request.resolver_match.url_name == 'map_explorer' %}font-bold text-ink{% endif %}">Map</a>
-            <a href="{% url 'home' %}#moods" class="whitespace-nowrap hover:text-ink">Mood Categories</a>
-            <a href="{% url 'home' %}#tales" class="whitespace-nowrap hover:text-ink">Tales</a>
-            <a href="{% url 'about' %}" class="whitespace-nowrap hover:text-ink {% if request.resolver_match.url_name == 'about' %}font-bold text-ink{% endif %}">About Us</a>
-        </nav>
-
-        <div class="ml-auto flex items-center gap-2 md:ml-0">
-            <form action="{% url 'spot_list' %}" method="get" class="relative hidden sm:block">
-                <label for="header-search" class="sr-only">Search a spot nearby</label>
-                <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">{% icon 'search' 'h-4 w-4' %}</span>
-                <input id="header-search" type="search" name="q" placeholder="Search a spot nearby" class="field field-pill w-52 py-2 pl-10">
-            </form>
-            {% if user.is_staff %}
-                <a href="{% url 'admin:index' %}" class="btn btn-dark btn-sm">Admin</a>
-            {% else %}
-                <a href="/admin/login/?next={{ request.path|urlencode }}" class="btn btn-dark btn-sm">Login</a>
-            {% endif %}
-            {% if user.is_authenticated %}
-            <form action="{% url 'admin:logout' %}" method="post" class="m-0">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-light btn-sm">Log out</button>
-            </form>
-            {% endif %}
-        </div>
-    </div>
-</header>
+{% include 'partials/_site_header.html' %}
+{% endblock %}
 
 <!-- ================= MESSAGES ================= -->
+{% block messages %}
 {% if messages %}
-<div class="mx-auto mt-4 max-w-6xl space-y-2 px-5">
-    {% for message in messages %}
-    <div class="rounded-2xl border px-4 py-3 text-sm font-medium {% if message.tags == 'error' %}border-red-300 bg-red-50 text-red-800{% else %}border-emerald-300 bg-emerald-50 text-emerald-800{% endif %}">
-        {{ message }}
-    </div>
-    {% endfor %}
-</div>
+<div class="mx-auto mt-4 max-w-6xl px-5">{% include 'partials/_messages.html' %}</div>
 {% endif %}
+{% endblock %}
 
 <main>
     {% block content %}{% endblock %}

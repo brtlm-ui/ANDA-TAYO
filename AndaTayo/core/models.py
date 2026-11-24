@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -103,6 +104,15 @@ class Spot(models.Model):
     is_top_pick = models.BooleanField(default=False)
     # Community submissions stay hidden until an admin approves them.
     is_approved = models.BooleanField(default=False)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.CharField(max_length=200, blank=True)
+
+    # Who sent it in, and which Spot Owner account manages it
+    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                     null=True, blank=True, related_name='submitted_spots')
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                              null=True, blank=True, related_name='owned_spots')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -168,6 +178,8 @@ class Review(models.Model):
     """A short review ("Tambayan Tale") left by a student."""
 
     spot = models.ForeignKey(Spot, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                             null=True, blank=True, related_name='reviews')
     reviewer_name = models.CharField(max_length=80)
     reviewer_note = models.CharField(max_length=100, blank=True, help_text='e.g. WMSU CS Student')
     rating = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
@@ -179,3 +191,34 @@ class Review(models.Model):
 
     def __str__(self):
         return f'{self.reviewer_name} - {self.spot.name} ({self.rating}/5)'
+
+
+class Profile(models.Model):
+    """Extra info for every account. Created automatically for each new user (core/signals.py)."""
+
+    STUDENT, OWNER, ADMIN = 'student', 'owner', 'admin'
+    ROLE_CHOICES = [(STUDENT, 'Student'), (OWNER, 'Spot Owner'), (ADMIN, 'Admin')]
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=STUDENT)
+    school = models.CharField(max_length=100, blank=True, help_text='Shown on your reviews, e.g. WMSU CS Student')
+    # Set when a student asks to manage a spot; cleared when an admin decides.
+    owner_requested_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f'{self.user} ({self.get_role_display()})'
+
+
+class Bookmark(models.Model):
+    """A spot a user saved for later."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='bookmarks')
+    spot = models.ForeignKey(Spot, on_delete=models.CASCADE, related_name='bookmarks')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [models.UniqueConstraint(fields=['user', 'spot'], name='one_bookmark_per_user_per_spot')]
+
+    def __str__(self):
+        return f'{self.user} saved {self.spot}'

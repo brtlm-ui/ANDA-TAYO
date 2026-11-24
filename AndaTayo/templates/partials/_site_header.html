@@ -1,0 +1,34 @@
+{% load static ui %}
+{# Site header: nav, search, and Log in / Sign up or the account menu (partials/_user_menu.html). #}
+<header id="site-header" class="border-b border-stone-300/70 bg-cream">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-5 py-4">
+        <a href="{% url 'home' %}" class="-ml-3 shrink-0" aria-label="Anda Tayo - home">
+            <img src="{% static 'images/andatayo_logo.svg' %}" alt="Anda Tayo" width="187" height="60" class="h-12 w-auto">
+        </a>
+
+        <nav class="order-last flex w-full gap-5 overflow-x-auto text-sm font-medium text-stone-500 md:order-none md:w-auto md:flex-1 md:justify-center">
+            <a href="{% url 'home' %}" class="whitespace-nowrap hover:text-ink {% if request.resolver_match.url_name == 'home' %}font-bold text-ink{% endif %}">Discover</a>
+            <a href="{% url 'spot_list' %}" class="whitespace-nowrap hover:text-ink {% if request.resolver_match.url_name == 'spot_list' %}font-bold text-ink{% endif %}">Spots</a>
+            <a href="{% url 'map_explorer' %}" class="whitespace-nowrap hover:text-ink {% if request.resolver_match.url_name == 'map_explorer' %}font-bold text-ink{% endif %}">Map</a>
+            <a href="{% url 'home' %}#moods" class="whitespace-nowrap hover:text-ink">Mood Categories</a>
+            <a href="{% url 'home' %}#tales" class="whitespace-nowrap hover:text-ink">Tales</a>
+            <a href="{% url 'about' %}" class="whitespace-nowrap hover:text-ink {% if request.resolver_match.url_name == 'about' %}font-bold text-ink{% endif %}">About Us</a>
+        </nav>
+
+        <div class="ml-auto flex items-center gap-2 md:ml-0">
+            <form action="{% url 'spot_list' %}" method="get" class="relative hidden sm:block">
+                <label for="header-search" class="sr-only">Search a spot nearby</label>
+                <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">{% icon 'search' 'h-4 w-4' %}</span>
+                <input id="header-search" type="search" name="q" placeholder="Search a spot nearby" class="field field-pill w-52 py-2 pl-10">
+            </form>
+            {% if user.is_authenticated %}
+                {% include 'partials/_user_menu.html' %}
+            {% else %}
+                {% with here=request.resolver_match.url_name %}
+                <a href="{% url 'login' %}{% if here != 'login' and here != 'signup' %}?next={{ request.get_full_path|urlencode }}{% endif %}" class="btn btn-light btn-sm">Log in</a>
+                <a href="{% url 'signup' %}" class="btn btn-dark btn-sm">Sign up</a>
+                {% endwith %}
+            {% endif %}
+        </div>
+    </div>
+</header>

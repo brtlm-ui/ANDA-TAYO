@@ -1,0 +1,46 @@
+{% extends 'accounts/_auth_base.html' %}
+{% load ui %}
+
+{% block title %}Log in{% endblock %}
+
+{% block panel_text %}Log in to save spots, share your tambayan tales, and manage your listing if you own a spot.{% endblock %}
+{% block panel_points %}
+    <span class="tag" style="--tag-bg: rgba(255,255,255,.92)">{% icon 'bookmark' 'h-3 w-3' %} Save spots</span>
+    <span class="tag" style="--tag-bg: rgba(255,255,255,.92)">{% icon 'chat' 'h-3 w-3' %} Write reviews</span>
+    <span class="tag" style="--tag-bg: rgba(255,255,255,.92)">{% icon 'store' 'h-3 w-3' %} Manage your spot</span>
+{% endblock %}
+
+{% block form %}
+<p class="eyebrow">Welcome back</p>
+<h1 class="mt-1 text-3xl font-extrabold tracking-tight">Log in to Anda Tayo</h1>
+
+{% if form.non_field_errors %}
+<div class="mt-5 flex gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+    {% icon 'x' 'h-4 w-4 mt-0.5 shrink-0' %}
+    <span>{{ form.non_field_errors.0 }}</span>
+</div>
+{% endif %}
+
+<form method="post" class="mt-6 space-y-4" novalidate>
+    {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    {% include 'accounts/_field.html' with field=form.email icon_name='mail' %}
+    {% url 'password_reset' as reset_url %}
+    {% include 'accounts/_field.html' with field=form.password icon_name='lock' password=True %}
+    <div class="flex items-center justify-between gap-3">
+        <label class="flex items-center gap-2 text-sm">{{ form.remember }} {{ form.remember.label }}</label>
+        <a href="{{ reset_url }}" class="text-xs font-bold text-amber-700 hover:underline">Forgot password?</a>
+    </div>
+    <button type="submit" class="btn btn-dark btn-lg w-full">Log in</button>
+</form>
+
+<p class="mt-6 text-center text-sm text-stone-600">
+    New to Anda Tayo? <a href="{% url 'signup' %}{% if next %}?next={{ next|urlencode }}{% endif %}" class="font-bold text-ink underline underline-offset-2">Create an account</a>
+</p>
+{% endblock %}
+
+{% block below_card %}
+<p class="mt-4 text-center text-xs text-stone-500">
+    Students, spot owners and admins all sign in here &mdash; you'll land on the right page for your account.
+</p>
+{% endblock %}

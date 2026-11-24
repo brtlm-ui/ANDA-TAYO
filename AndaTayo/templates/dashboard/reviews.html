@@ -1,0 +1,41 @@
+{% extends 'dashboard/_layout.html' %}
+{% load ui %}
+
+{% block title %}Reviews{% endblock %}
+{% block crumb %}Admin &rsaquo; Reviews{% endblock %}
+{% block page_title %}Reviews{% endblock %}
+
+{% block dash %}
+<form method="get" class="flex flex-wrap items-center gap-2">
+    <label class="relative min-w-[14rem] flex-1 sm:max-w-sm">
+        <span class="sr-only">Search reviews</span>
+        <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">{% icon 'search' %}</span>
+        <input type="search" name="q" value="{{ q }}" placeholder="Search text, spot or reviewer" class="field field-pill py-2 pl-10">
+    </label>
+    <button type="submit" class="btn btn-dark btn-sm">Search</button>
+    {% if q %}<a href="{% url 'dashboard_reviews' %}" class="text-xs font-bold underline">Clear</a>{% endif %}
+</form>
+
+<div class="mt-5 space-y-3">
+    {% for review in reviews %}
+    <article class="card flex flex-wrap items-start gap-4 p-4">
+        <span class="icon-badge h-10 w-10 bg-butter text-sm font-extrabold">{{ review.reviewer_name|slice:":2"|upper }}</span>
+        <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2 text-sm">
+                <b>{{ review.reviewer_name }}</b>
+                {% if review.user %}<span class="text-xs text-stone-500">{{ review.user.email }}</span>{% else %}<span class="text-xs text-stone-400">no account</span>{% endif %}
+                <span class="tag" style="--tag-bg: #fff; box-shadow: inset 0 0 0 1px var(--line)">{% icon 'star' 'h-3 w-3 fill-current text-amber-500' %} {{ review.rating }}/5</span>
+            </div>
+            <p class="mt-1 text-xs text-stone-500">on <a href="{% url 'spot_detail' review.spot.id %}" class="font-semibold underline">{{ review.spot.name }}</a> &middot; {{ review.created_at|timesince }} ago</p>
+            <p class="mt-2 text-sm text-stone-700">&ldquo;{{ review.comment }}&rdquo;</p>
+        </div>
+        <form method="post" action="{% url 'delete_review' review.id %}" onsubmit="return confirm('Delete this review?');">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn btn-light btn-sm !text-red-700">{% icon 'x' 'h-3.5 w-3.5' %} Delete</button>
+        </form>
+    </article>
+    {% empty %}
+    <div class="card p-12 text-center text-sm text-stone-500">No reviews{% if q %} match "{{ q }}"{% endif %}.</div>
+    {% endfor %}
+</div>
+{% endblock %}

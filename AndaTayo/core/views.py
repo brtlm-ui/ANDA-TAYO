@@ -1,18 +1,19 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.db.models import Avg, Count, Min, Q
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
-from .forms import ReviewForm, SpotForm
+from .forms import AdminSpotForm, ReviewForm, SpotForm
 from .geo import DEFAULT_CENTER, WMSU_COORDS, annotate_distance, within_radius
 from .icons import ICONS
-from .models import Amenity, Mood, Review, Spot
+from .models import Amenity, Bookmark, Mood, Profile, Review, Spot
+from .roles import admin_required, can_manage_spot, get_profile, is_admin, role_of
 
-# Only staff (the superuser / admins) can edit or delete spots from the site.
-staff_required = user_passes_test(lambda u: u.is_active and u.is_staff, login_url='/admin/login/')
 
 # Where the map jumps to for each area chip (approximate centers).
 AREA_CENTERS = {
@@ -29,12 +30,14 @@ MAX_API_RESULTS = 200
 
 
 def visible_spots(user):
-    """Everyone sees approved spots; staff also see pending community submissions."""
+    """Everyone sees approved spots; admins also see pending submissions (never rejected ones)."""
     spots = Spot.objects.select_related('mood').prefetch_related('amenities').annotate(
         avg_rating=Avg('reviews__rating'),
         review_total=Count('reviews', distinct=True),
     )
-    return spots if user.is_staff else spots.filter(is_approved=True)
+    if is_admin(user):
+        return spots.filter(rejected_at__isnull=True)
+    return spots.filter(is_approved=True)
 
 
 # ---------------------------------------------------------------------------
@@ -148,14 +151,27 @@ def spot_list(request):
         'curated_total': curated_total,
         'wifi_pct': round(100 * curated.filter(amenities__code='wifi').distinct().count() / curated_total) if curated_total else 0,
         'min_price': curated.aggregate(m=Min('starts_at_price'))['m'],
-        'pending_count': Spot.objects.filter(is_approved=False).count() if request.user.is_staff else 0,
+        'pending_count': (Spot.objects.filter(is_approved=False, rejected_at__isnull=True).count()
+                          if is_admin(request.user) else 0),
     })
 
 
 def spot_detail(request, id):
-    spot = get_object_or_404(visible_spots(request.user), id=id)
+    user = request.user
+    spot = get_object_or_404(Spot.objects.select_related('mood').prefetch_related('amenities').annotate(
+        avg_rating=Avg('reviews__rating'), review_total=Count('reviews', distinct=True)), id=id)
+    # Not live yet (or rejected): only admins, its owner and whoever submitted it can see it.
+    if not spot.is_approved:
+        allowed = is_admin(user) or (user.is_authenticated and user.id in (spot.owner_id, spot.submitted_by_id))
+        if not allowed:
+            raise Http404('Spot not found')
+    initial = {'reviewer_note': get_profile(user).school} if user.is_authenticated else None
     return render(request, 'spot_detail.html', {
-        'spot': spot, 'reviews': spot.reviews.all(), 'review_form': ReviewForm(),
+        'spot': spot,
+        'reviews': spot.reviews.select_related('user'),
+        'review_form': ReviewForm(initial=initial),
+        'is_saved': user.is_authenticated and Bookmark.objects.filter(user=user, spot=spot).exists(),
+        'can_manage': user.is_authenticated and can_manage_spot(user, spot),
     })
 
 
@@ -303,58 +319,73 @@ def map_explorer(request):
 
 
 # ---------------------------------------------------------------------------
-# CREATE: "Submit a Tambayan Spot" (anyone can submit; admins approve)
+# CREATE: "Submit a Tambayan Spot" (any signed-in user; admins approve)
 # ---------------------------------------------------------------------------
 
+def _local_next(request, fallback, **kwargs):
+    """Redirect to ?next= / POST next if it's a path on this site, otherwise to `fallback`."""
+    nxt = request.POST.get('next') or request.GET.get('next') or ''
+    if nxt.startswith('/') and not nxt.startswith('//'):
+        return redirect(nxt)
+    return redirect(fallback, **kwargs)
+
+
+@login_required
 def add_spot(request):
-    if request.method == 'POST':
-        form = SpotForm(request.POST, request.FILES)
-        if form.is_valid():
-            spot = form.save(commit=False)
-            spot.is_approved = request.user.is_staff   # community submissions wait for approval
-            spot.save()
-            form.save_m2m()
-            if spot.is_approved:
-                messages.success(request, f'"{spot.name}" was added.')
-                return redirect('spot_detail', id=spot.id)
-            messages.success(request, 'Thanks! Your spot was submitted and will show up once it is verified.')
-            return redirect('spot_list')
-    else:
-        form = SpotForm()
+    user = request.user
+    FormClass = AdminSpotForm if is_admin(user) else SpotForm
+    form = FormClass(request.POST or None, request.FILES or None)
+    if request.method == 'POST' and form.is_valid():
+        spot = form.save(commit=False)
+        spot.submitted_by = user
+        if role_of(user) == Profile.OWNER:
+            spot.owner = user                    # owners manage what they submit
+        if is_admin(user):
+            spot.is_approved, spot.approved_at = True, timezone.now()
+        spot.save()
+        form.save_m2m()
+        if spot.is_approved:
+            messages.success(request, f'"{spot.name}" is live.')
+            return redirect('spot_detail', id=spot.id)
+        messages.success(request, 'Thanks! Your spot was submitted. It will show up once an admin approves it.')
+        if role_of(user) == Profile.OWNER:
+            return redirect('owner_dashboard')
+        return redirect('spot_detail', id=spot.id)
     return render(request, 'add_spot.html', {'form': form})
 
 
 # ---------------------------------------------------------------------------
-# UPDATE / DELETE (staff only)
+# UPDATE (admins: any spot, owners: their own) / DELETE (admins)
 # ---------------------------------------------------------------------------
 
-@staff_required
+@login_required
 def edit_spot(request, id):
     spot = get_object_or_404(Spot, id=id)
-    if request.method == 'POST':
-        form = SpotForm(request.POST, request.FILES, instance=spot)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Spot updated.')
-            return redirect('spot_detail', id=spot.id)
-    else:
-        form = SpotForm(instance=spot)
+    if not can_manage_spot(request.user, spot):
+        raise PermissionDenied
+    FormClass = AdminSpotForm if is_admin(request.user) else SpotForm
+    form = FormClass(request.POST or None, request.FILES or None, instance=spot)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Spot updated.')
+        return redirect('spot_detail', id=spot.id)
     return render(request, 'edit_spot.html', {'form': form, 'spot': spot})
 
 
-@staff_required
+@admin_required
 @require_POST
 def delete_spot(request, id):
     spot = get_object_or_404(Spot, id=id)
     spot.delete()
     messages.success(request, f'"{spot.name}" was deleted.')
-    return redirect('spot_list')
+    return _local_next(request, 'spot_list')
 
 
 # ---------------------------------------------------------------------------
-# Reviews ("Tambayan Tales")
+# Reviews ("Tambayan Tales") - signed-in users; your name comes from your account
 # ---------------------------------------------------------------------------
 
+@login_required
 @require_POST
 def add_review(request, id):
     spot = get_object_or_404(visible_spots(request.user), id=id)
@@ -362,18 +393,22 @@ def add_review(request, id):
     if form.is_valid():
         review = form.save(commit=False)
         review.spot = spot
+        review.user = request.user
+        review.reviewer_name = request.user.get_full_name() or request.user.email.split('@')[0]
         review.save()
         messages.success(request, 'Thanks for sharing your tambayan tale!')
     else:
-        messages.error(request, 'Please fill in your name, a rating and a short comment.')
+        messages.error(request, 'Please choose a rating and write a short comment.')
     return redirect('spot_detail', id=spot.id)
 
 
-@staff_required
+@login_required
 @require_POST
 def delete_review(request, id):
     review = get_object_or_404(Review, id=id)
+    if not (is_admin(request.user) or review.user_id == request.user.id):
+        raise PermissionDenied
     spot_id = review.spot_id
     review.delete()
     messages.success(request, 'Review deleted.')
-    return redirect('spot_detail', id=spot_id)
+    return _local_next(request, 'spot_detail', id=spot_id)

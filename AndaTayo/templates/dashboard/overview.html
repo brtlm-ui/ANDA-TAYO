@@ -1,0 +1,106 @@
+{% extends 'dashboard/_layout.html' %}
+{% load ui %}
+
+{% block title %}Admin dashboard{% endblock %}
+{% block crumb %}Admin{% endblock %}
+{% block page_title %}Overview{% endblock %}
+
+{% block dash %}
+<p class="text-sm text-stone-600">Hi {{ me.first_name }}! {% if pending_total %}Here's what needs you today.{% else %}Nothing is waiting for you right now.{% endif %}</p>
+
+<!-- Stat cards -->
+<div class="mt-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+    {% for s in stats %}
+    <div class="card p-4 sm:p-5">
+        <div class="flex items-start justify-between gap-2">
+            <p class="eyebrow">{{ s.label }}</p>
+            <span class="icon-badge h-9 w-9" style="background: {{ s.bg }}">{% icon s.icon %}</span>
+        </div>
+        <p class="mt-2 text-3xl font-extrabold sm:mt-3 sm:text-4xl">{{ s.value }}</p>
+        <p class="mt-1 text-xs text-stone-500">{{ s.note }}</p>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="mt-6 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+    <!-- Needs attention -->
+    <section class="card p-5">
+        <div class="flex items-center justify-between">
+            <h2 class="text-lg font-extrabold">Needs your attention</h2>
+            <a href="{% url 'dashboard_approvals' %}" class="btn btn-light btn-sm">See all {% icon 'chevron-right' 'h-3.5 w-3.5' %}</a>
+        </div>
+        <ul class="mt-4 divide-y divide-[color:var(--line)]">
+            {% for spot in pending_spots %}
+            <li class="flex items-center gap-4 py-3">
+                <span class="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl text-white" style="background: {{ spot.category_color }}">
+                    {% if spot.image_src %}<img src="{{ spot.image_src }}" alt="" class="h-full w-full object-cover">{% else %}{% icon spot.category_icon 'h-6 w-6' %}{% endif %}
+                </span>
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="tag" style="--tag-bg: var(--butter)">New spot</span>
+                        <p class="truncate text-sm font-extrabold">{{ spot.name }}</p>
+                    </div>
+                    <p class="mt-0.5 truncate text-xs text-stone-500">
+                        by {% if spot.submitted_by %}{{ spot.submitted_by.get_full_name|default:spot.submitted_by.email }}{% else %}unknown{% endif %} &middot; {{ spot.created_at|timesince }} ago
+                    </p>
+                </div>
+                <a href="{% url 'dashboard_approvals' %}#spot-{{ spot.id }}" class="btn btn-dark btn-sm">Review</a>
+            </li>
+            {% endfor %}
+            {% for p in owner_requests %}
+            <li class="flex items-center gap-4 py-3">
+                <span class="icon-badge h-14 w-14 rounded-xl bg-[#a9d8ff]">{% icon 'store' 'h-6 w-6' %}</span>
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="tag" style="--tag-bg: #a9d8ff">Owner request</span>
+                        <p class="truncate text-sm font-extrabold">{{ p.user.get_full_name|default:p.user.email }}</p>
+                    </div>
+                    <p class="mt-0.5 truncate text-xs text-stone-500">{{ p.user.email }} &middot; {{ p.owner_requested_at|timesince }} ago</p>
+                </div>
+                <a href="{% url 'dashboard_approvals' %}?show=owners" class="btn btn-dark btn-sm">Review</a>
+            </li>
+            {% endfor %}
+            {% if not pending_spots and not owner_requests %}
+            <li class="py-8 text-center text-sm text-stone-500">{% icon 'check' 'h-6 w-6 mx-auto text-emerald-600' %}<span class="mt-2 block">All caught up. No pending submissions or requests.</span></li>
+            {% endif %}
+        </ul>
+    </section>
+
+    <!-- Activity -->
+    <section class="card p-5">
+        <h2 class="text-lg font-extrabold">Recent activity</h2>
+        <ol class="mt-4 space-y-4">
+            {% for a in activity %}
+            <li class="flex gap-3">
+                <span class="icon-badge h-8 w-8 bg-sand text-stone-700">{% icon a.icon 'h-3.5 w-3.5' %}</span>
+                <div class="min-w-0 text-sm leading-snug">
+                    <p class="font-semibold">{{ a.text }}</p>
+                    <p class="truncate text-xs text-stone-500">{{ a.who }} &middot; {{ a.when|timesince }} ago</p>
+                </div>
+            </li>
+            {% empty %}
+            <li class="text-sm text-stone-500">Nothing yet.</li>
+            {% endfor %}
+        </ol>
+    </section>
+</div>
+
+<!-- Spots by category -->
+<section class="card mt-6 p-5">
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-extrabold">Live spots by category</h2>
+        <a href="{% url 'dashboard_spots' %}" class="text-xs font-bold underline">Manage spots</a>
+    </div>
+    <div class="mt-4 space-y-3">
+        {% for c in by_category %}
+        <div class="grid grid-cols-[7rem_1fr_2rem] items-center gap-3 text-sm">
+            <span class="font-semibold">{{ c.label }}</span>
+            <span class="h-3 overflow-hidden rounded-full bg-sand"><span class="block h-full rounded-full" style="width: {{ c.pct }}%; background: {{ c.color }}"></span></span>
+            <span class="text-right font-bold">{{ c.n }}</span>
+        </div>
+        {% empty %}
+        <p class="text-sm text-stone-500">No live spots yet.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

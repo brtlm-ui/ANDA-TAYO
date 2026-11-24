@@ -1,0 +1,126 @@
+{% extends 'dashboard/_layout.html' %}
+{% load static ui %}
+
+{% block title %}Pending approvals{% endblock %}
+{% block head %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
+{% block crumb %}Admin &rsaquo; Approvals{% endblock %}
+{% block page_title %}Pending approvals{% endblock %}
+
+{% block dash %}
+<div class="flex flex-wrap items-center gap-2">
+    <a href="?show=all" class="chip {% if show == 'all' %}is-active{% endif %}">All <span class="tag" style="--tag-bg: {% if show == 'all' %}rgba(255,255,255,.2); --tag-fg: #fff{% else %}var(--sand){% endif %}">{{ pending_total }}</span></a>
+    <a href="?show=spots" class="chip {% if show == 'spots' %}is-active{% endif %}">{% icon 'pin' 'h-3.5 w-3.5' %} New spots ({{ counts.spots }})</a>
+    <a href="?show=owners" class="chip {% if show == 'owners' %}is-active{% endif %}">{% icon 'store' 'h-3.5 w-3.5' %} Owner requests ({{ counts.owners }})</a>
+    <span class="ml-auto text-xs text-stone-500">Oldest first</span>
+</div>
+
+<div class="mt-5 space-y-5">
+    {% for spot in pending_spots %}
+    <article id="spot-{{ spot.id }}" class="card scroll-mt-24 overflow-hidden">
+        <div class="grid md:grid-cols-[13rem_1fr] xl:grid-cols-[13rem_1fr_16rem]">
+            <!-- photo -->
+            <div class="relative h-44 md:h-full" style="background: {{ spot.mood.pastel }}">
+                {% if spot.image_src %}
+                    <img src="{{ spot.image_src }}" alt="{{ spot.name }}" class="absolute inset-0 h-full w-full object-cover">
+                {% else %}
+                    <div class="absolute inset-0 grid place-items-center text-ink/50">
+                        <div class="text-center">{% icon spot.category_icon 'h-10 w-10 mx-auto' %}<p class="mt-1 text-[11px] font-semibold">No photo</p></div>
+                    </div>
+                {% endif %}
+                <span class="tag absolute left-3 top-3" style="--tag-bg: var(--butter)">New spot</span>
+            </div>
+
+            <!-- details -->
+            <div class="p-5">
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="tag" style="--tag-bg: {{ spot.category_color }}; --tag-fg: #fff">{% icon spot.category_icon 'h-3 w-3' %} {{ spot.get_category_display }}</span>
+                    <span class="tag" style="--tag-bg: {{ spot.mood.pastel }}">{{ spot.mood.name }}</span>
+                </div>
+                <h2 class="mt-2 text-xl font-extrabold">{{ spot.name }}</h2>
+                <p class="mt-0.5 flex items-center gap-1 text-xs text-stone-500">{% icon 'pin' 'h-3 w-3' %} {{ spot.address }}</p>
+                {% if spot.description %}<p class="mt-3 text-sm text-stone-700">{{ spot.description|truncatechars:280 }}</p>{% endif %}
+                <dl class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs">
+                    <div class="flex items-center gap-1"><dt class="text-stone-500">From</dt><dd class="font-bold">&#8369;{{ spot.starts_at_price|floatformat:0 }}</dd></div>
+                    {% if spot.hours_label %}<div class="flex items-center gap-1"><dt class="text-stone-500">{% icon 'clock' 'h-3 w-3' %}</dt><dd class="font-bold">{{ spot.hours_label }}</dd></div>{% endif %}
+                    {% if spot.latitude is None %}<div class="font-bold text-amber-700">No map location</div>{% endif %}
+                </dl>
+                <div class="mt-2 flex flex-wrap gap-1">{% for a in spot.amenities.all %}<span class="tag">{% icon a.icon 'h-3 w-3' %} {{ a.name }}</span>{% endfor %}</div>
+                <p class="mt-4 flex items-center gap-2 text-xs text-stone-500">
+                    {% if spot.submitted_by %}
+                    <span class="icon-badge h-6 w-6 bg-sand text-[10px] font-bold">{{ spot.submitted_by.email|slice:":1"|upper }}</span>
+                    Submitted by <b class="text-ink">{{ spot.submitted_by.get_full_name|default:spot.submitted_by.email }}</b>
+                    ({{ spot.submitted_by.email }})
+                    {% else %}Submitted before accounts existed{% endif %}
+                    &middot; {{ spot.created_at|timesince }} ago
+                </p>
+            </div>
+
+            <!-- map -->
+            <div class="hidden border-l border-[color:var(--line)] p-3 xl:block">
+                {% if spot.latitude is not None %}
+                <div class="isolate h-full min-h-[11rem] overflow-hidden rounded-xl" data-mini-map data-lat="{{ spot.latitude|stringformat:'f' }}" data-lng="{{ spot.longitude|stringformat:'f' }}" data-color="{{ spot.category_color }}"></div>
+                {% else %}
+                <div class="grid h-full min-h-[11rem] place-items-center rounded-xl bg-sand/60 text-center text-xs text-stone-500">No map location given</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- actions -->
+        <div class="flex flex-wrap items-start gap-2 border-t border-[color:var(--line)] bg-sand/40 px-5 py-3">
+            <form method="post" action="{% url 'approve_spot' spot.id %}">
+                {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-dark btn-sm">{% icon 'check' 'h-3.5 w-3.5' %} Approve</button>
+            </form>
+            <a href="{% url 'edit_spot' spot.id %}" class="btn btn-light btn-sm">{% icon 'edit' 'h-3.5 w-3.5' %} Edit first</a>
+            <a href="{% url 'spot_detail' spot.id %}" class="btn btn-light btn-sm">{% icon 'external' 'h-3.5 w-3.5' %} Preview</a>
+            <details class="w-full sm:w-auto">
+                <summary class="btn btn-light btn-sm !text-red-700">{% icon 'x' 'h-3.5 w-3.5' %} Reject</summary>
+                <form method="post" action="{% url 'reject_spot' spot.id %}" class="mt-3 flex w-full max-w-xl flex-col gap-2">
+                    {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <label class="sr-only" for="reason-{{ spot.id }}">Reason</label>
+                    <select id="reason-{{ spot.id }}" name="reason" class="field py-2 text-sm">
+                        {% for r in reject_reasons %}<option>{{ r }}</option>{% endfor %}
+                    </select>
+                    <label class="sr-only" for="note-{{ spot.id }}">Note (optional)</label>
+                    <input id="note-{{ spot.id }}" name="note" maxlength="120" placeholder="Add a short note (optional)" class="field py-2 text-sm">
+                    <button type="submit" class="btn btn-danger btn-sm self-start">Send rejection</button>
+                </form>
+            </details>
+            <span class="ml-auto self-center text-[11px] text-stone-500">The submitter sees the result on their account.</span>
+        </div>
+    </article>
+    {% endfor %}
+
+    {% for p in owner_requests %}
+    <article class="card flex flex-wrap items-center gap-4 p-5">
+        <span class="icon-badge h-12 w-12 bg-[#a9d8ff]">{% icon 'store' 'h-5 w-5' %}</span>
+        <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-1.5">
+                <span class="tag" style="--tag-bg: #a9d8ff">Owner request</span>
+                <p class="text-base font-extrabold">{{ p.user.get_full_name|default:p.user.email }}</p>
+            </div>
+            <p class="mt-0.5 text-xs text-stone-500">{{ p.user.email }} &middot; asked {{ p.owner_requested_at|timesince }} ago &middot; joined {{ p.user.date_joined|date:"M j, Y" }}</p>
+            <p class="mt-1 text-xs text-stone-500">After approving, assign their spot from <a class="font-bold underline" href="{% url 'dashboard_spots' %}">Spots</a> &rsaquo; Edit &rsaquo; "Spot Owner account".</p>
+        </div>
+        <form method="post" action="{% url 'decide_owner_request' p.user_id %}" class="flex gap-2">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" name="decision" value="approve" class="btn btn-dark btn-sm">{% icon 'check' 'h-3.5 w-3.5' %} Make Spot Owner</button>
+            <button type="submit" name="decision" value="decline" class="btn btn-light btn-sm !text-red-700">Decline</button>
+        </form>
+    </article>
+    {% endfor %}
+
+    {% if not pending_spots and not owner_requests %}
+    <div class="card p-12 text-center">
+        <span class="icon-badge mx-auto h-14 w-14" style="background: #d1fae5">{% icon 'check' 'h-6 w-6' %}</span>
+        <p class="mt-4 text-lg font-extrabold">All caught up</p>
+        <p class="mt-1 text-sm text-stone-500">New submissions and Spot Owner requests will show up here.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block dash_scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/map-config.js' %}"></script>
+{% endblock %}

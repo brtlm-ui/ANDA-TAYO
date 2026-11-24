@@ -62,6 +62,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.account',
             ],
         },
     },
@@ -143,8 +144,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # http://127.0.0.1:8000/) - never the full page URL - on cross-site requests.
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
-# Editing / deleting spots on the site needs a staff login (same login as /admin/)
-LOGIN_URL = '/admin/login/'
+# Accounts: one login page for every role (Student / Spot Owner / Admin), sign in with email.
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'home'
+AUTHENTICATION_BACKENDS = ['core.backends.EmailBackend']
 
 
 # Email

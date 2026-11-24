@@ -1,0 +1,8 @@
+{% load ui %}
+{# One sidebar link. Params: key, label, icon_name, url, badge (optional). Uses `active` from the page. #}
+<a href="{{ url }}"
+   class="flex items-center gap-3 rounded-xl px-3 py-2.5 {% if active == key %}bg-ink text-white{% else %}text-stone-700 hover:bg-sand{% endif %}"
+   {% if active == key %}aria-current="page"{% endif %}>
+    {% icon icon_name %} {{ label }}
+    {% if badge %}<span class="tag ml-auto" style="--tag-bg: var(--brand); --tag-fg: #fff">{{ badge }}</span>{% endif %}
+</a>

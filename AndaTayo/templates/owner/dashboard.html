@@ -1,0 +1,88 @@
+{% extends 'dashboard/_layout.html' %}
+{% load ui %}
+
+{% block title %}My spots{% endblock %}
+{% block crumb %}Spot Owner{% endblock %}
+{% block page_title %}My spots{% endblock %}
+{% block top_actions %}
+<a href="{% url 'add_spot' %}" class="btn btn-dark btn-sm">{% icon 'plus' 'h-3.5 w-3.5' %} <span class="hidden sm:inline">Add a spot</span></a>
+{% endblock %}
+
+{% block dash %}
+<p class="text-sm text-stone-600">Hi {{ me.first_name }}! Keep your listing fresh so students know what to expect.</p>
+
+{% if submissions %}
+<div class="mt-4 space-y-2">
+    {% for s in submissions %}
+    <div class="flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm {% if s.rejected_at %}border-red-200 bg-red-50{% else %}border-amber-300 bg-amber-50{% endif %}">
+        <span class="mt-0.5 {% if s.rejected_at %}text-red-700{% else %}text-amber-700{% endif %}">{% if s.rejected_at %}{% icon 'x' %}{% else %}{% icon 'clock' %}{% endif %}</span>
+        <span>
+            {% if s.rejected_at %}<b>{{ s.name }}</b> wasn't approved: {{ s.rejection_reason }}
+            {% else %}<b>{{ s.name }}</b> is waiting for an admin to approve it.{% endif %}
+        </span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+    {% for spot in my_spots %}
+    <article class="card flex flex-col overflow-hidden">
+        <div class="relative h-40" style="background: {{ spot.mood.pastel }}">
+            {% if spot.image_src %}<img src="{{ spot.image_src }}" alt="{{ spot.name }}" class="h-full w-full object-cover">
+            {% else %}<span class="grid h-full place-items-center text-ink/50">{% icon spot.category_icon 'h-10 w-10' %}</span>{% endif %}
+            {% if spot.is_approved %}<span class="tag absolute left-3 top-3" style="--tag-bg: #d1fae5; --tag-fg: #065f46">Live</span>
+            {% elif spot.rejected_at %}<span class="tag absolute left-3 top-3" style="--tag-bg: #fee2e2; --tag-fg: #991b1b">Not approved</span>
+            {% else %}<span class="tag absolute left-3 top-3" style="--tag-bg: #fef3c7; --tag-fg: #92400e">Waiting for approval</span>{% endif %}
+        </div>
+        <div class="flex flex-1 flex-col p-4">
+            <div class="flex flex-wrap gap-1.5">
+                <span class="tag" style="--tag-bg: {{ spot.category_color }}; --tag-fg: #fff">{% icon spot.category_icon 'h-3 w-3' %} {{ spot.get_category_display }}</span>
+                <span class="tag" style="--tag-bg: {{ spot.mood.pastel }}">{{ spot.mood.name }}</span>
+            </div>
+            <h2 class="mt-2 text-lg font-extrabold">{{ spot.name }}</h2>
+            <p class="text-xs text-stone-500">{{ spot.address }}</p>
+            {% if spot.rejected_at %}<p class="mt-2 text-xs text-red-700">Reason: {{ spot.rejection_reason }}</p>{% endif %}
+            <dl class="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div class="rounded-xl bg-sand/60 py-2"><dt class="text-[10px] text-stone-500">Rating</dt><dd class="text-sm font-extrabold">{% if spot.avg_rating %}{{ spot.avg_rating|floatformat:1 }}{% else %}&ndash;{% endif %}</dd></div>
+                <div class="rounded-xl bg-sand/60 py-2"><dt class="text-[10px] text-stone-500">Reviews</dt><dd class="text-sm font-extrabold">{{ spot.review_total }}</dd></div>
+                <div class="rounded-xl bg-sand/60 py-2"><dt class="text-[10px] text-stone-500">Hours</dt><dd class="truncate px-1 text-[11px] font-extrabold">{{ spot.hours_label|default:"&ndash;" }}</dd></div>
+            </dl>
+            <div class="mt-4 grid grid-cols-2 gap-2">
+                <a href="{% url 'edit_spot' spot.id %}" class="btn btn-dark btn-sm">{% icon 'edit' 'h-3.5 w-3.5' %} Edit details</a>
+                <a href="{% url 'spot_detail' spot.id %}" class="btn btn-light btn-sm">{% icon 'external' 'h-3.5 w-3.5' %} View</a>
+            </div>
+        </div>
+    </article>
+    {% endfor %}
+
+    <a href="{% url 'add_spot' %}"
+       class="grid min-h-[16rem] place-items-center rounded-[1.25rem] border-2 border-dashed border-[color:var(--line)] p-6 text-center text-stone-500 hover:border-ink hover:text-ink">
+        <span>{% icon 'plus' 'h-8 w-8 mx-auto' %}<span class="mt-2 block text-sm font-bold">{% if my_spots %}Add another spot{% else %}Add your spot{% endif %}</span>
+        <span class="block text-xs">Admins verify new listings first</span></span>
+    </a>
+</div>
+
+{% if not my_spots %}
+<p class="mt-4 text-xs text-stone-500">Already listed on Anda Tayo? Ask an admin to link the existing listing to your account.</p>
+{% endif %}
+
+<section class="card mt-6 p-5">
+    <h2 class="text-lg font-extrabold">Latest reviews of your spots</h2>
+    <ul class="mt-3 divide-y divide-[color:var(--line)]">
+        {% for r in latest_reviews %}
+        <li class="py-3">
+            <div class="flex flex-wrap items-center gap-2 text-sm">
+                <span class="icon-badge h-8 w-8 bg-butter text-xs font-extrabold">{{ r.reviewer_name|slice:":2"|upper }}</span>
+                <b>{{ r.reviewer_name }}</b>{% if r.reviewer_note %}<span class="text-xs text-stone-500">{{ r.reviewer_note }}</span>{% endif %}
+                <span class="tag" style="--tag-bg: #fff; box-shadow: inset 0 0 0 1px var(--line)">{% icon 'star' 'h-3 w-3 fill-current text-amber-500' %} {{ r.rating }}/5</span>
+                <span class="ml-auto text-xs text-stone-500">{{ r.spot.name }} &middot; {{ r.created_at|timesince }} ago</span>
+            </div>
+            <p class="mt-2 text-sm text-stone-700">&ldquo;{{ r.comment }}&rdquo;</p>
+        </li>
+        {% empty %}
+        <li class="py-6 text-center text-sm text-stone-500">No reviews yet. They'll show up here as students visit.</li>
+        {% endfor %}
+    </ul>
+</section>
+{% endblock %}

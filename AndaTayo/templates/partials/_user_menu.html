@@ -1,0 +1,31 @@
+{% load ui %}
+{# Account menu for the signed-in user. `me` comes from core/context_processors.py (role, badge, links). #}
+<details class="relative" data-account-menu>
+    <summary class="flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3 shadow-sm ring-1 ring-[color:var(--line)] hover:ring-ink">
+        <span class="icon-badge h-8 w-8 text-xs font-extrabold" style="background: {{ me.badge_bg }}">{{ me.initials }}</span>
+        <span class="hidden max-w-[8rem] truncate text-sm font-semibold sm:inline">{{ me.first_name }}</span>
+        {% icon 'chevron-down' 'h-3.5 w-3.5 text-stone-500' %}
+        <span class="sr-only">Account menu</span>
+    </summary>
+    <div class="card absolute right-0 z-[1200] mt-2 w-64 p-2 shadow-lg">
+        <div class="px-3 pb-3 pt-2">
+            <p class="truncate text-sm font-extrabold">{{ me.name }}</p>
+            <p class="truncate text-xs text-stone-500">{{ me.email }}</p>
+            <span class="tag mt-2" style="--tag-bg: {{ me.badge_bg }}">{% icon me.role_icon 'h-3 w-3' %} {{ me.role_label }}</span>
+        </div>
+        <div class="border-t border-[color:var(--line)] py-1">
+            {% for link in me.links %}
+            <a href="{{ link.url }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold hover:bg-sand">
+                <span class="text-stone-500">{% icon link.icon %}</span> {{ link.label }}
+                {% if link.badge %}<span class="tag ml-auto" style="--tag-bg: var(--brand); --tag-fg: #fff">{{ link.badge }}</span>{% endif %}
+            </a>
+            {% endfor %}
+        </div>
+        <form action="{% url 'logout' %}" method="post" class="border-t border-[color:var(--line)] pt-1">
+            {% csrf_token %}
+            <button type="submit" class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">
+                {% icon 'logout' %} Log out
+            </button>
+        </form>
+    </div>
+</details>

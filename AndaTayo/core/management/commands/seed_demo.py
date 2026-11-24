@@ -84,7 +84,7 @@ class Command(BaseCommand):
                     opening_time=None if is24 else time(8), closing_time=closing, is_24_hours=is24,
                     is_top_pick=top, is_approved=True, latitude=lat, longitude=lng,
                     wifi_speed_mbps=wifi,
-                    description=f'{MARKER} Edit or delete this spot in /admin/.',
+                    description=f'{MARKER} Edit or delete this spot from the Admin dashboard.',
                 ),
             )
             if was_created:

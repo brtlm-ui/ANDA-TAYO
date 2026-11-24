@@ -64,8 +64,10 @@ class PublicPageTests(TestCase):
         return [s.name for s in response.context['spots']]
 
     def test_pages_render(self):
-        for name in ('home', 'about', 'spot_list', 'add_spot'):
+        for name in ('home', 'about', 'spot_list', 'login', 'signup'):
             self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)
+        # submitting a spot needs an account
+        self.assertRedirects(self.client.get(reverse('add_spot')), f"{reverse('login')}?next={reverse('add_spot')}")
         self.assertEqual(self.client.get(reverse('spot_detail', args=[self.a.id])).status_code, 200)
 
     def test_landing_stats_are_computed_from_real_rows(self):
@@ -120,15 +122,27 @@ class SubmitAndManageTests(TestCase):
         self.mood = Mood.objects.first()
         self.spot = make_spot(self.mood, name='Existing')
         self.staff = User.objects.create_user('admin1', password='pass12345!', is_staff=True)
+        self.student = User.objects.create_user('ana@example.com', email='ana@example.com', password='pass12345!', first_name='Ana Reyes')
         self.form = {
             'name': 'Hidden Gem', 'category': 'cafe', 'address': 'Tetuan', 'area': 'tetuan', 'mood': self.mood.id,
             'starts_at_price': '80', 'opening_time': '09:00', 'closing_time': '21:00',
         }
 
-    def test_public_submission_waits_for_approval(self):
+    def test_logged_out_visitors_cannot_submit(self):
+        self.client.post(reverse('add_spot'), self.form)
+        self.assertFalse(Spot.objects.filter(name='Hidden Gem').exists())
+
+    def test_student_submission_waits_for_approval(self):
+        self.client.force_login(self.student)
         response = self.client.post(reverse('add_spot'), self.form)
-        self.assertRedirects(response, reverse('spot_list'))
-        self.assertFalse(Spot.objects.get(name='Hidden Gem').is_approved)
+        spot = Spot.objects.get(name='Hidden Gem')
+        self.assertRedirects(response, reverse('spot_detail', args=[spot.id]))
+        self.assertFalse(spot.is_approved)
+        self.assertEqual(spot.submitted_by, self.student)
+        # the submitter can see their pending spot, other visitors can't
+        self.assertEqual(self.client.get(reverse('spot_detail', args=[spot.id])).status_code, 200)
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse('spot_detail', args=[spot.id])).status_code, 404)
 
     def test_staff_submission_is_approved_immediately(self):
         self.client.force_login(self.staff)
@@ -136,6 +150,7 @@ class SubmitAndManageTests(TestCase):
         self.assertTrue(Spot.objects.get(name='Hidden Gem').is_approved)
 
     def test_invalid_submission_shows_errors(self):
+        self.client.force_login(self.student)
         response = self.client.post(reverse('add_spot'), {'name': ''})
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Spot.objects.filter(name='').exists())
@@ -146,6 +161,9 @@ class SubmitAndManageTests(TestCase):
         self.assertEqual(self.client.get(edit_url).status_code, 302)       # redirected to login
         self.client.post(delete_url)
         self.assertTrue(Spot.objects.filter(id=self.spot.id).exists())
+        self.client.force_login(self.student)                              # students can't either
+        self.assertEqual(self.client.get(edit_url).status_code, 403)
+        self.assertEqual(self.client.post(delete_url).status_code, 403)
 
         self.client.force_login(self.staff)
         self.client.post(edit_url, {**self.form, 'name': 'Renamed'})
@@ -155,18 +173,27 @@ class SubmitAndManageTests(TestCase):
         self.client.post(delete_url)
         self.assertFalse(Spot.objects.filter(id=self.spot.id).exists())
 
-    def test_anyone_can_post_a_review(self):
+    def test_signed_in_users_post_reviews_under_their_name(self):
         url = reverse('add_review', args=[self.spot.id])
-        self.client.post(url, {'reviewer_name': 'Ana', 'reviewer_note': 'WMSU', 'rating': 5, 'comment': 'Nice'})
-        self.assertEqual(self.spot.reviews.count(), 1)
-        self.client.post(url, {'reviewer_name': 'Ana', 'rating': 9, 'comment': 'bad rating'})
+        self.client.post(url, {'rating': 5, 'comment': 'Nice'})              # logged out: ignored
+        self.assertEqual(self.spot.reviews.count(), 0)
+        self.client.force_login(self.student)
+        self.client.post(url, {'reviewer_name': 'Someone Else', 'reviewer_note': 'WMSU', 'rating': 5, 'comment': 'Nice'})
+        review = self.spot.reviews.get()
+        self.assertEqual((review.user, review.reviewer_name), (self.student, 'Ana Reyes'))
+        self.client.post(url, {'rating': 9, 'comment': 'bad rating'})
         self.assertEqual(self.spot.reviews.count(), 1)  # rating 9 rejected
 
-    def test_only_staff_can_delete_reviews(self):
+    def test_only_admins_and_the_author_can_delete_reviews(self):
         review = Review.objects.create(spot=self.spot, reviewer_name='Ana', rating=5, comment='x')
         url = reverse('delete_review', args=[review.id])
         self.client.post(url)
         self.assertTrue(Review.objects.filter(id=review.id).exists())
+        self.client.force_login(self.student)                              # not the author
+        self.assertEqual(self.client.post(url).status_code, 403)
+        mine = Review.objects.create(spot=self.spot, user=self.student, reviewer_name='Ana', rating=4, comment='mine')
+        self.client.post(reverse('delete_review', args=[mine.id]))
+        self.assertFalse(Review.objects.filter(id=mine.id).exists())
         self.client.force_login(self.staff)
         self.client.post(url)
         self.assertFalse(Review.objects.filter(id=review.id).exists())

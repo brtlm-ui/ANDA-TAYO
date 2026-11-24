@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static ui %}
+
+{% block title %}Account settings{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-4xl px-5 py-10">
+    <div class="flex flex-wrap items-center gap-4">
+        <span class="icon-badge h-16 w-16 text-xl font-extrabold" style="background: {{ me.badge_bg }}">{{ me.initials }}</span>
+        <div>
+            <p class="eyebrow">Account settings</p>
+            <h1 class="text-3xl font-extrabold tracking-tight">{{ me.name }}</h1>
+            <span class="tag mt-1" style="--tag-bg: {{ me.badge_bg }}">{% icon me.role_icon 'h-3 w-3' %} {{ me.role_label }}</span>
+        </div>
+    </div>
+
+    <div class="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <!-- Details -->
+        <form method="post" class="card space-y-4 p-6" novalidate>
+            {% csrf_token %}
+            <h2 class="text-lg font-extrabold">Your details</h2>
+            {% include 'accounts/_field.html' with field=account_form.full_name icon_name='user' %}
+            {% include 'accounts/_field.html' with field=account_form.email icon_name='mail' %}
+            {% include 'accounts/_field.html' with field=account_form.school icon_name='school' %}
+            <button type="submit" name="save_profile" class="btn btn-dark">Save details</button>
+        </form>
+
+        <div class="space-y-6">
+            <!-- Role -->
+            <div class="card p-6">
+                <h2 class="text-lg font-extrabold">Your role</h2>
+                {% if role == 'admin' %}
+                    <p class="mt-2 text-sm text-stone-600">You're an <b>Admin</b>: you approve spots and manage users.</p>
+                    <a href="{% url 'dashboard' %}" class="btn btn-light btn-sm mt-4">{% icon 'grid' 'h-3.5 w-3.5' %} Admin dashboard</a>
+                {% elif role == 'owner' %}
+                    <p class="mt-2 text-sm text-stone-600">You're a <b>Spot Owner</b>: you can update the spots assigned to you.</p>
+                    <a href="{% url 'owner_dashboard' %}" class="btn btn-light btn-sm mt-4">{% icon 'store' 'h-3.5 w-3.5' %} My spots</a>
+                {% elif profile.owner_requested_at %}
+                    <p class="mt-2 text-sm text-stone-600">Your <b>Spot Owner</b> request was sent {{ profile.owner_requested_at|timesince }} ago. An admin will review it soon.</p>
+                {% else %}
+                    <p class="mt-2 text-sm text-stone-600">Own a caf&eacute; or hangout spot? Ask to become a Spot Owner so you can manage its listing.</p>
+                    <form method="post" action="{% url 'request_owner' %}" class="mt-4">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-light btn-sm">{% icon 'store' 'h-3.5 w-3.5' %} Request Spot Owner access</button>
+                    </form>
+                {% endif %}
+            </div>
+
+            <!-- Password -->
+            <form method="post" class="card space-y-4 p-6" novalidate>
+                {% csrf_token %}
+                <h2 class="text-lg font-extrabold">Change password</h2>
+                {% for error in password_form.non_field_errors %}<p class="text-xs font-semibold text-red-600">{{ error }}</p>{% endfor %}
+                {% include 'accounts/_field.html' with field=password_form.old_password password=True %}
+                {% include 'accounts/_field.html' with field=password_form.new_password1 password=True %}
+                {% include 'accounts/_field.html' with field=password_form.new_password2 %}
+                <button type="submit" name="change_password" class="btn btn-dark">Change password</button>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/auth.js' %}"></script>{% endblock %}
